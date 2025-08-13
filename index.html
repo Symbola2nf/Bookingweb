@@ -11,9 +11,6 @@
      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&display=swap" rel="stylesheet"> 
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/> 
       
-     <!-- EmailJS SDK --> 
-     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script> 
-
      <style> 
          :root { 
              --booking-blue: #003580; 
@@ -34,22 +31,19 @@
              font-family: 'Cairo', sans-serif;  
              background-color: var(--booking-bg);  
              color: var(--text-primary); 
-             padding-top: 120px; /* Adjust for fixed header */ 
-             padding-bottom: 80px; /* Adjust for fixed footer */ 
+             padding-top: 120px; 
+             padding-bottom: 80px; 
          } 
           
-         /* General Styles */ 
          .header-title { font-weight: 900; font-size: 2rem; color: white; letter-spacing: -1px; } 
          .main-tab-container { justify-content: center; } 
          .main-tab { border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: -2px; } 
          .main-tab.active { color: white; border-bottom-color: var(--booking-yellow); } 
          
-         /* FIX: Yellow border around the whole search container */
          .search-container { 
             border: 4px solid var(--booking-yellow); 
          }
 
-         /* Page & Modal Transitions */ 
          .page-container, .modal-container { 
              opacity: 0; visibility: hidden; 
              transition: opacity 0.3s, visibility 0.3s; 
@@ -67,16 +61,13 @@
          @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } } 
          .modal-content, .popup-content { animation: fadeIn 0.3s ease-out; } 
           
-         /* OTP Input Styling */ 
          .otp-inputs { display: flex; gap: 10px; direction: ltr; } 
          .otp-inputs input { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; border: 2px solid var(--border-color); border-radius: 8px; } 
          .otp-inputs input:focus { outline: none; border-color: var(--booking-blue-light); } 
           
-         /* Calendar Styling */ 
          .day-selected { background-color: var(--booking-blue) !important; color: white !important; border-radius: 9999px !important; } 
          .day-in-range { background-color: #dbeafe !important; color: #1e3a8a !important; border-radius: 0 !important; } 
 
-         /* Notifications */ 
          .notification-dot { 
              position: absolute; 
              top: 6px; 
@@ -88,13 +79,11 @@
              border: 2px solid var(--booking-blue); 
          } 
 
-         /* Favorite Icon Styling */ 
          .favorite-btn.favorited .fa-heart { 
              color: var(--booking-red); 
-             font-weight: 900; /* Makes it the solid version */ 
+             font-weight: 900; 
          } 
 
-         /* Autocomplete Styling */ 
          .autocomplete-suggestions { 
              position: absolute; 
              top: 100%; 
@@ -117,11 +106,9 @@
              background-color: #f0f0f0; 
          } 
 
-         /* Hide scrollbar for webkit browsers */ 
          .no-scrollbar::-webkit-scrollbar { display: none; } 
          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } 
 
-         /* Form Validation Error Styling */ 
          .form-error-message { 
              color: var(--booking-red); 
              font-size: 0.875rem; 
@@ -193,6 +180,21 @@
         select:required:invalid { color: #6b7280; }
         option[value=""][disabled] { display: none; }
         option { color: #1a1a1a; }
+
+        /* Trip Type Selector */
+        .trip-type-selector label {
+            padding: 8px 16px;
+            border: 1px solid var(--border-light-color);
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        .trip-type-selector input[type="radio"]:checked + label {
+            background-color: var(--booking-blue-light);
+            color: white;
+            border-color: var(--booking-blue-light);
+        }
      </style> 
  </head> 
  <body> 
@@ -203,9 +205,7 @@
                  <div class="flex items-center gap-2 text-xl"> 
                      <div id="currency-selector-wrapper" class="relative">
                          <button id="currencyBtn" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-globe"></i></button>
-                         <div id="currency-popup" class="hidden popup-content absolute top-12 left-0 w-40 bg-white text-slate-800 rounded-lg shadow-2xl border z-[60]">
-                            <!-- Currency options will be injected here -->
-                         </div>
+                         <div id="currency-popup" class="hidden popup-content absolute top-12 left-0 w-40 bg-white text-slate-800 rounded-lg shadow-2xl border z-[60]"></div>
                      </div>
                      <button id="notificationsBtn" class="relative hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-bell"></i><span id="notification-dot" class="hidden notification-dot"></span></button> 
                      <button id="accountBtnHeader" class="hover:bg-white/10 p-2 rounded-full transition"><i class="fas fa-user-circle"></i></button> 
@@ -217,11 +217,8 @@
          </header> 
 
          <main id="mainContent" class="container mx-auto p-4 space-y-8"> 
-             <!-- FIX: Restored original wrapper to apply yellow border correctly -->
              <div id="search-widget-container" class="bg-transparent rounded-lg search-container">
-                <div id="search-forms-container" class="p-4 bg-white rounded-md">
-                    <!-- Search forms will be injected here -->
-                </div>
+                <div id="search-forms-container" class="p-4 bg-white rounded-md"></div>
              </div> 
               
              <div id="discover-content" class="space-y-8"> 
@@ -294,8 +291,8 @@
 
      // --- Firebase Initialization --- 
      let db, auth; 
-     let unsubscribeFromPendingBooking = null; // To hold the listener unsub function 
-     let unsubscribeFromAdminBookings = null; // To hold the admin listener 
+     let unsubscribeFromPendingBooking = null; 
+     let unsubscribeFromAdminBookings = null; 
 
      function initializeFirebase() { 
          return new Promise((resolve, reject) => { 
@@ -449,9 +446,16 @@
 
 
          // --- HTML Templates --- 
-         // FIX: Reverted to vertical layout for better responsiveness
          const flightsFormHTML = (params = {}) => `
-         <form id="flights-form" class="search-form-panel hidden space-y-3"> 
+         <form id="flights-form" class="search-form-panel hidden space-y-4"> 
+            <div class="flex items-center gap-4 trip-type-selector">
+                <input type="radio" name="trip-type" id="round-trip" value="round-trip" class="hidden" checked>
+                <label for="round-trip">ذهاب وعودة</label>
+                <input type="radio" name="trip-type" id="one-way" value="one-way" class="hidden">
+                <label for="one-way">ذهاب فقط</label>
+                <input type="radio" name="trip-type" id="multi-city" value="multi-city" class="hidden" disabled>
+                <label for="multi-city" class="cursor-not-allowed opacity-50">مدن متعددة</label>
+            </div>
              <div class="relative"><i class="fa fa-plane-departure absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="from" placeholder="المغادرة من" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.from || ''}" autocomplete="off"></div> 
              <div class="relative"><i class="fa fa-plane-arrival absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="to" placeholder="الوجهة إلى" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.to || ''}" autocomplete="off"></div> 
              <div class="grid grid-cols-2 gap-3"> 
@@ -650,12 +654,13 @@
                      const baseChildPrice = parseFloat(item.pricing.base_price_child) || 0; 
                      const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1; 
                      const currentDiscount = parseFloat(item.discount) || 0; 
-                     const numAdults = parseInt(searchParams.adults) || 0; 
+                     const numAdults = parseInt(searchParams.adults) || 1; 
+                     const numChildren = parseInt(searchParams.children) || 0;
                      
-                     originalPrice = (baseAdultPrice) * seasonMultiplier; // Price per adult
+                     originalPrice = (baseAdultPrice) * seasonMultiplier;
                      finalPrice = originalPrice * (1 - currentDiscount); 
                      
-                     const totalFlightPrice = (baseAdultPrice * numAdults + baseChildPrice * (searchParams.children || 0)) * seasonMultiplier * (1 - currentDiscount);
+                     const totalFlightPrice = (baseAdultPrice * numAdults + baseChildPrice * numChildren) * seasonMultiplier * (1 - currentDiscount);
 
                      const hours = Math.floor(item.duration_total_minutes / 60);
                      const minutes = item.duration_total_minutes % 60;
@@ -675,7 +680,7 @@
                                 <div class="flex items-center justify-between mt-4">
                                     <div class="text-center">
                                         <p class="font-bold text-lg">${departureTime}</p>
-                                        <p class="text-sm text-slate-500">${item.from_code}</p>
+                                        <p class="text-sm text-slate-500">${item.from_city_ar} (${item.from_code})</p>
                                     </div>
                                     <div class="flex-grow px-2">
                                         <div class="timeline">
@@ -687,7 +692,7 @@
                                     </div>
                                      <div class="text-center">
                                         <p class="font-bold text-lg">${arrivalTime}</p>
-                                        <p class="text-sm text-slate-500">${item.to_code}</p>
+                                        <p class="text-sm text-slate-500">${item.to_city_ar} (${item.to_code})</p>
                                     </div>
                                 </div>
                             </div>
@@ -1661,6 +1666,18 @@
                      const nextInput = target.nextElementSibling; 
                      if (nextInput && target.value) { nextInput.focus(); } 
                  } 
+
+                 if (target.name === 'trip-type') {
+                    const returnDateInput = document.getElementById('flightReturnDate');
+                    if (target.value === 'one-way') {
+                        returnDateInput.disabled = true;
+                        returnDateInput.value = '';
+                        returnDateInput.classList.add('bg-slate-200', 'cursor-not-allowed');
+                    } else {
+                        returnDateInput.disabled = false;
+                        returnDateInput.classList.remove('bg-slate-200', 'cursor-not-allowed');
+                    }
+                 }
              }); 
 
              document.body.addEventListener('focusin', (e) => { if (e.target.id === 'cvvInput') e.target.type = 'password'; }); 
