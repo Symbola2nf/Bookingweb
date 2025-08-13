@@ -44,40 +44,9 @@
          .main-tab { border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: -2px; } 
          .main-tab.active { color: white; border-bottom-color: var(--booking-yellow); } 
          
-         /* NEW: Search Widget Styling */
-         .search-widget-wrapper {
-            display: flex;
-            border: 4px solid var(--booking-yellow);
-            border-radius: 0.5rem;
-            overflow: hidden;
-            background-color: white;
-         }
-         .search-input-group {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            padding: 0.75rem;
-            border-left: 1px solid var(--booking-yellow);
-            position: relative;
-         }
-         .search-input-group:last-child {
-            border-left: none;
-         }
-         .search-input-group i {
-            color: var(--text-secondary);
-            font-size: 1.25rem;
-            margin-left: 0.75rem;
-         }
-         .search-input-group input, .search-input-group .readonly-input {
-            width: 100%;
-            border: none;
-            outline: none;
-            background: transparent;
-            font-size: 1rem;
-            padding-right: 0.5rem;
-         }
-         .search-input-group .readonly-input {
-            cursor: pointer;
+         /* FIX: Yellow border around the whole search container */
+         .search-container { 
+            border: 4px solid var(--booking-yellow); 
          }
 
          /* Page & Modal Transitions */ 
@@ -248,8 +217,11 @@
          </header> 
 
          <main id="mainContent" class="container mx-auto p-4 space-y-8"> 
-             <div id="search-forms-container" class="bg-transparent rounded-lg">
-                <!-- Search forms will be injected here -->
+             <!-- FIX: Restored original wrapper to apply yellow border correctly -->
+             <div id="search-widget-container" class="bg-transparent rounded-lg search-container">
+                <div id="search-forms-container" class="p-4 bg-white rounded-md">
+                    <!-- Search forms will be injected here -->
+                </div>
              </div> 
               
              <div id="discover-content" class="space-y-8"> 
@@ -477,58 +449,28 @@
 
 
          // --- HTML Templates --- 
+         // FIX: Reverted to vertical layout for better responsiveness
          const flightsFormHTML = (params = {}) => `
-         <form id="flights-form" class="search-form-panel hidden">
-            <div class="search-widget-wrapper">
-                <div class="search-input-group">
-                    <i class="fas fa-plane-departure"></i>
-                    <div class="w-full relative">
-                        <input type="text" name="from" placeholder="المغادرة من" class="w-full" value="${params.from || ''}" autocomplete="off">
-                    </div>
-                </div>
-                <div class="search-input-group">
-                    <i class="fas fa-plane-arrival"></i>
-                     <div class="w-full relative">
-                        <input type="text" name="to" placeholder="الوجهة إلى" class="w-full" value="${params.to || ''}" autocomplete="off">
-                    </div>
-                </div>
-                <div class="search-input-group">
-                    <i class="fas fa-calendar-day"></i>
-                    <div class="flex-grow grid grid-cols-2">
-                         <input type="text" id="flightDepartureDate" readonly class="readonly-input text-center" placeholder="تاريخ المغادرة" value="${formatDate(params.departureDate)}">
-                         <input type="text" id="flightReturnDate" readonly class="readonly-input text-center border-r" placeholder="تاريخ العودة" value="${formatDate(params.returnDate)}">
-                    </div>
-                </div>
-                 <div class="search-input-group">
-                    <i class="fas fa-user-friends"></i>
-                    <input type="text" id="passenger-input" readonly class="readonly-input" value="${params.adults || 1} بالغون، ${params.children || 0} أطفال">
-                </div>
-                <button type="submit" class="bg-[var(--booking-blue-light)] text-white text-lg font-bold p-4 px-8 hover:bg-[var(--booking-blue)] transition-colors">ابحث</button> 
-            </div>
+         <form id="flights-form" class="search-form-panel hidden space-y-3"> 
+             <div class="relative"><i class="fa fa-plane-departure absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="from" placeholder="المغادرة من" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.from || ''}" autocomplete="off"></div> 
+             <div class="relative"><i class="fa fa-plane-arrival absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="to" placeholder="الوجهة إلى" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.to || ''}" autocomplete="off"></div> 
+             <div class="grid grid-cols-2 gap-3"> 
+                 <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="flightDepartureDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ المغادرة" value="${formatDate(params.departureDate)}"></div> 
+                 <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="flightReturnDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ العودة" value="${formatDate(params.returnDate)}"></div> 
+             </div> 
+             <div class="relative"><i class="fa fa-user-friends absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="passenger-input" readonly class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" value="${params.adults || 1} بالغون، ${params.children || 0} أطفال"></div> 
+             <button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white text-lg font-bold p-3 rounded-lg hover:bg-[var(--booking-blue)] transition-colors">ابحث</button> 
          </form>`; 
           
          const staysFormHTML = (params = {}) => `
-         <form id="stays-form" class="search-form-panel hidden">
-            <div class="search-widget-wrapper">
-                <div class="search-input-group">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <div class="w-full relative">
-                        <input type="text" name="destination" placeholder="أين تريد الذهاب؟" class="w-full" value="${params.destination || ''}" autocomplete="off">
-                    </div>
-                </div>
-                <div class="search-input-group">
-                    <i class="fas fa-calendar-day"></i>
-                    <div class="flex-grow grid grid-cols-2">
-                         <input type="text" id="stayCheckinDate" readonly class="date-input readonly-input text-center" placeholder="تاريخ الوصول" value="${formatDate(params.checkinDate)}">
-                         <input type="text" id="stayCheckoutDate" readonly class="date-input readonly-input text-center border-r" placeholder="تاريخ المغادرة" value="${formatDate(params.checkoutDate)}">
-                    </div>
-                </div>
-                 <div class="search-input-group">
-                    <i class="fas fa-users"></i>
-                    <input type="text" id="guest-input" readonly class="readonly-input" value="${params.rooms || 1} غرف، ${params.adults || 2} بالغون، ${params.children || 0} أطفال">
-                </div>
-                <button type="submit" class="bg-[var(--booking-blue-light)] text-white text-lg font-bold p-4 px-8 hover:bg-[var(--booking-blue)] transition-colors">ابحث</button> 
-            </div>
+         <form id="stays-form" class="search-form-panel hidden space-y-3"> 
+             <div class="relative"><i class="fa fa-map-marker-alt absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" name="destination" placeholder="أين تريد الذهاب؟" class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 text-base" value="${params.destination || ''}" autocomplete="off"></div> 
+             <div class="grid grid-cols-2 gap-3"> 
+                 <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="stayCheckinDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ الوصول" value="${formatDate(params.checkinDate)}"></div> 
+                 <div class="relative"><i class="fa fa-calendar-day absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="stayCheckoutDate" readonly class="date-input w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" placeholder="تاريخ المغادرة" value="${formatDate(params.checkoutDate)}"></div> 
+             </div> 
+             <div class="relative"><i class="fa fa-users absolute top-1/2 -translate-y-1/2 right-3 text-slate-400"></i><input type="text" id="guest-input" readonly class="w-full border-2 bg-slate-100 rounded-lg p-3 pr-10 cursor-pointer" value="${params.rooms || 1} غرف، ${params.adults || 2} بالغون، ${params.children || 0} أطفال"></div> 
+             <button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white text-lg font-bold p-3 rounded-lg hover:bg-[var(--booking-blue)] transition-colors">ابحث</button> 
          </form>`; 
           
          const signInPageHTML = `<div class="w-full max-w-lg mx-auto p-4 text-center"><div class="flex justify-between items-center mb-8"><span class="w-8"></span><i class="fas fa-suitcase-rolling text-4xl text-slate-300"></i><button class="back-btn text-3xl text-slate-400">&times;</button></div><h2 class="text-2xl font-bold mb-2">سجّل دخولك للاطلاع على حجوزاتك</h2><p class="text-slate-500 mb-8">يمكنك التعرّف على عروضنا الحصرية، حفظ معلومات المسافرين وإدارة حجوزاتك في المستقبل معنا!</p><form id="signInForm" class="space-y-4 text-right"><div class="space-y-4"><div><label class="font-bold block mb-2">البريد الإلكتروني</label><div class="relative"><input type="email" name="email" placeholder="example@mail.com" class="w-full border-2 rounded-lg p-3 text-lg text-right"></div></div><div><label class="font-bold block mb-2">كلمة المرور</label><div class="relative"><input type="password" name="password" placeholder="كلمة المرور" class="w-full border-2 rounded-lg p-3 text-lg pr-12"><i class="fas fa-eye-slash password-toggle-icon absolute top-1/2 right-4 -translate-y-1/2 text-slate-400 cursor-pointer"></i></div></div></div><p id="signInError" class="text-red-500 text-sm font-bold hidden text-center">الرجاء إدخال بياناتك بشكل صحيح.</p><button type="submit" class="w-full bg-[var(--booking-blue-light)] text-white font-bold py-4 rounded-lg text-lg mt-6">تسجيل الدخول</button></form><a href="#" data-action="show-forgot-password" class="block my-6 font-bold text-[var(--booking-blue-light)]">هل نسيت كلمة المرور؟</a><div class="my-6 flex items-center gap-4"><hr class="flex-grow"><span class="text-slate-400">أو</span><hr class="flex-grow"></div><p class="mt-8 text-slate-500">ليس لديك حساب؟ <a href="#" data-action="show-sign-up" class="font-bold text-[var(--booking-blue-light)]">إنشاء حساب جديد</a></p></div>`; 
@@ -709,11 +651,12 @@
                      const seasonMultiplier = parseFloat(item.pricing.seasons[season]) || 1; 
                      const currentDiscount = parseFloat(item.discount) || 0; 
                      const numAdults = parseInt(searchParams.adults) || 0; 
-                     const numChildren = parseInt(searchParams.children) || 0; 
                      
-                     originalPrice = (baseAdultPrice * numAdults + baseChildPrice * numChildren) * seasonMultiplier;
+                     originalPrice = (baseAdultPrice) * seasonMultiplier; // Price per adult
                      finalPrice = originalPrice * (1 - currentDiscount); 
                      
+                     const totalFlightPrice = (baseAdultPrice * numAdults + baseChildPrice * (searchParams.children || 0)) * seasonMultiplier * (1 - currentDiscount);
+
                      const hours = Math.floor(item.duration_total_minutes / 60);
                      const minutes = item.duration_total_minutes % 60;
                      const durationText = `${hours} س ${minutes} د`;
@@ -750,10 +693,10 @@
                             </div>
                             <div class="w-full md:w-1/3 flex flex-row md:flex-col items-center justify-between md:justify-center gap-2 border-t md:border-t-0 md:border-r pt-4 md:pt-0 md:pr-4 mt-4 md:mt-0">
                                  <div class="text-center">
-                                     <p class="font-extrabold text-2xl text-[var(--booking-blue)]">${formatPrice(finalPrice / numAdults)}</p>
+                                     <p class="font-extrabold text-2xl text-[var(--booking-blue)]">${formatPrice(finalPrice)}</p>
                                      <p class="text-xs text-slate-500">للشخص الواحد</p>
                                  </div>
-                                 <button data-action="initiate-booking" data-item-id="${item.id}" data-item-type="flights" data-price="${finalPrice}" class="w-auto md:w-full bg-[var(--booking-blue-light)] text-white font-bold py-2 px-6 rounded-lg">اختر</button>
+                                 <button data-action="initiate-booking" data-item-id="${item.id}" data-item-type="flights" data-price="${totalFlightPrice}" class="w-auto md:w-full bg-[var(--booking-blue-light)] text-white font-bold py-2 px-6 rounded-lg">اختر</button>
                                  <button data-action="toggle-favorite" class="favorite-btn text-2xl text-slate-300 hover:text-[var(--booking-red)] transition ${isFavorited ? 'favorited' : ''}" data-item-id="${item.id}" data-item-type="flights"><i class="far fa-heart"></i></button>
                             </div>
                         </div>
@@ -813,7 +756,7 @@
                      <h2 class="text-3xl font-extrabold">نتائج البحث</h2> 
                      <button class="back-btn text-3xl text-slate-400">&times;</button> 
                  </header> 
-                 <div class="bg-transparent rounded-lg">${searchWidgetHTML}</div> 
+                 <div class="bg-transparent rounded-lg search-container"><div class="p-4 bg-white rounded-md">${searchWidgetHTML}</div></div> 
                  <div class="space-y-4">${resultsHTML}</div> 
              </div>`; 
          }; 
@@ -1033,8 +976,6 @@
 
 
          async function initializeAppLogic() { 
-             // REMOVED: EmailJS initialization is no longer needed here.
-
              try { 
                  const flightsRef = collection(db, `artifacts/${appId}/public/data/flights`); 
                  const staysRef = collection(db, `artifacts/${appId}/public/data/stays`); 
@@ -1089,7 +1030,6 @@
                  } 
              }); 
              
-             // NEW: Currency Selector Logic
              const currencyPopup = popups.currency;
              currencyPopup.innerHTML = `<div class="p-2">${Object.keys(CURRENCIES).map(code => 
                 `<div class="currency-item p-2 hover:bg-slate-100 rounded-md cursor-pointer" data-code="${code}">
@@ -1116,7 +1056,6 @@
                     appState.currency = CURRENCIES[code];
                     console.log("Currency changed to:", appState.currency);
                     currencyPopup.classList.add('hidden');
-                    // Re-render search results if they are visible
                     if (pages.searchResults.classList.contains('active') && appState.lastSearch.type) {
                         pages.searchResults.innerHTML = searchResultsPageHTML(appState.lastSearch.results, appState.lastSearch.type, appState.lastSearch.params);
                         const newForm = pages.searchResults.querySelector(`#${appState.lastSearch.type}-form`);
@@ -1158,7 +1097,6 @@
                  }); 
              }); 
 
-             // --- Unified Event Handler --- 
              document.body.addEventListener('click', async (e) => { 
                  const target = e.target; 
 
